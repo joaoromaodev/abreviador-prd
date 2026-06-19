@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { aplicarAbreviacoes, verificarLimite } from "@/lib/abbreviation";
-import { CONFIG_PADRAO, STORAGE_KEYS } from "@/lib/constants";
+import { STORAGE_KEYS } from "@/lib/constants";
 import { readStorage, removeStorage } from "@/lib/storage";
-import type { PalavraAbreviacao } from "@/lib/types";
-import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { usePalavras } from "@/hooks/usePalavras";
 import { AreaTexto, Botao, Card, Rotulo } from "@/components/ui";
 
 export default function PaginaAbreviador() {
-  const { value: palavras } = useLocalStorageState<PalavraAbreviacao[]>(STORAGE_KEYS.palavras, []);
-  const { value: config } = useLocalStorageState(STORAGE_KEYS.configuracoes, CONFIG_PADRAO);
+  const { palavras, carregando: carregandoPalavras, erro: erroPalavras } = usePalavras();
+  const { config, carregando: carregandoConfig, erro: erroConfig } = useConfiguracoes();
 
   const [textoEntrada, setTextoEntrada] = useState("");
   const [resultado, setResultado] = useState<string | null>(null);
@@ -27,6 +27,8 @@ export default function PaginaAbreviador() {
       removeStorage(STORAGE_KEYS.rascunho);
     }
   }, []);
+
+  const carregando = carregandoPalavras || carregandoConfig;
 
   function handleAbreviar() {
     const textoProcessado = aplicarAbreviacoes(textoEntrada, palavras, {
@@ -56,9 +58,16 @@ export default function PaginaAbreviador() {
         <h1 className="text-xl font-semibold text-gray-900">Abreviador</h1>
         <p className="mt-1 text-sm text-gray-500">
           Escreva o texto, clique em &quot;Abreviar&quot; e veja o resultado já com as abreviações cadastradas
-          aplicadas e o contador em relação ao limite de {config.limiteCaracteres} caracteres.
+          (compartilhadas com a equipe) aplicadas e o contador em relação ao limite de {config.limiteCaracteres}{" "}
+          caracteres.
         </p>
       </div>
+
+      {(erroPalavras || erroConfig) && (
+        <p role="alert" className="text-sm text-red-600">
+          {erroPalavras ?? erroConfig}
+        </p>
+      )}
 
       <Card>
         <Rotulo htmlFor="texto-entrada">Texto original</Rotulo>
@@ -72,8 +81,8 @@ export default function PaginaAbreviador() {
         <div className="mt-1 text-xs text-gray-400">{textoEntrada.length} caracteres no texto original</div>
 
         <div className="mt-4">
-          <Botao type="button" onClick={handleAbreviar} disabled={textoEntrada.trim().length === 0}>
-            Abreviar
+          <Botao type="button" onClick={handleAbreviar} disabled={textoEntrada.trim().length === 0 || carregando}>
+            {carregando ? "Carregando dicionário..." : "Abreviar"}
           </Botao>
         </div>
       </Card>

@@ -1,29 +1,24 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { gerarId } from "@/lib/id";
-import { STORAGE_KEYS } from "@/lib/constants";
 import type { PalavraAbreviacao } from "@/lib/types";
-import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { usePalavras } from "@/hooks/usePalavras";
 import { Botao, CampoTexto, Card, Rotulo } from "@/components/ui";
 
 export default function PaginaPalavras() {
-  const { value: palavras, setValue: setPalavras, hidratado } = useLocalStorageState<PalavraAbreviacao[]>(
-    STORAGE_KEYS.palavras,
-    []
-  );
+  const { palavras, carregando, erro: erroCarregamento, adicionar, editar, remover } = usePalavras();
 
   const [palavraForm, setPalavraForm] = useState("");
   const [abreviacaoForm, setAbreviacaoForm] = useState("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
   const [termoBusca, setTermoBusca] = useState("");
 
   const palavrasFiltradas = useMemo(() => {
     const termo = termoBusca.trim().toLowerCase();
-    const lista = [...palavras].sort((a, b) => a.palavra.localeCompare(b.palavra, "pt-BR"));
-    if (!termo) return lista;
-    return lista.filter(
+    if (!termo) return palavras;
+    return palavras.filter(
       (item) => item.palavra.toLowerCase().includes(termo) || item.abreviacao.toLowerCase().includes(termo)
     );
   }, [palavras, termoBusca]);
@@ -35,7 +30,7 @@ export default function PaginaPalavras() {
     setErro(null);
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const palavra = palavraForm.trim();
     const abreviacao = abreviacaoForm.trim();
@@ -45,23 +40,20 @@ export default function PaginaPalavras() {
       return;
     }
 
-    const jaExiste = palavras.some(
-      (item) => item.palavra.toLowerCase() === palavra.toLowerCase() && item.id !== editandoId
-    );
-    if (jaExiste) {
-      setErro("Essa palavra já está cadastrada.");
-      return;
+    setErro(null);
+    setSalvando(true);
+    try {
+      if (editandoId) {
+        await editar(editandoId, { palavra, abreviacao });
+      } else {
+        await adicionar({ palavra, abreviacao });
+      }
+      limparFormulario();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao salvar.");
+    } finally {
+      setSalvando(false);
     }
-
-    if (editandoId) {
-      setPalavras((atual) =>
-        atual.map((item) => (item.id === editandoId ? { ...item, palavra, abreviacao } : item))
-      );
-    } else {
-      setPalavras((atual) => [...atual, { id: gerarId(), palavra, abreviacao }]);
-    }
-
-    limparFormulario();
   }
 
   function handleEditar(item: PalavraAbreviacao) {
@@ -71,11 +63,15 @@ export default function PaginaPalavras() {
     setErro(null);
   }
 
-  function handleRemover(item: PalavraAbreviacao) {
+  async function handleRemover(item: PalavraAbreviacao) {
     const confirmou = window.confirm(`Remover a abreviação de "${item.palavra}"?`);
     if (!confirmou) return;
-    setPalavras((atual) => atual.filter((p) => p.id !== item.id));
-    if (editandoId === item.id) limparFormulario();
+    try {
+      await remover(item.id);
+      if (editandoId === item.id) limparFormulario();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao remover.");
+    }
   }
 
   return (
@@ -83,10 +79,16 @@ export default function PaginaPalavras() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Palavras / Abreviações</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Cadastre palavras ou frases e a abreviação correspondente. Na aba Abreviador, toda ocorrência delas no
-          texto é substituída automaticamente.
+          Cadastre palavras ou frases e a abreviação correspondente. A lista é compartilhada com toda a equipe — na
+          aba Abreviador, toda ocorrência delas no texto é substituída automaticamente.
         </p>
       </div>
+
+      {erroCarregamento && (
+        <p role="alert" className="text-sm text-red-600">
+          {erroCarregamento}
+        </p>
+      )}
 
       <Card>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
@@ -109,9 +111,11 @@ export default function PaginaPalavras() {
             />
           </div>
           <div className="flex gap-2">
-            <Botao type="submit">{editandoId ? "Salvar edição" : "Adicionar"}</Botao>
+            <Botao type="submit" disabled={salvando}>
+              {editandoId ? "Salvar edição" : "Adicionar"}
+            </Botao>
             {editandoId && (
-              <Botao type="button" variante="secundario" onClick={limparFormulario}>
+              <Botao type="button" variante="secundario" onClick={limparFormulario} disabled={salvando}>
                 Cancelar
               </Botao>
             )}
@@ -135,7 +139,7 @@ export default function PaginaPalavras() {
         />
 
         <div className="mt-4 overflow-x-auto">
-          {!hidratado ? (
+          {carregando ? (
             <p className="py-6 text-center text-sm text-gray-400">Carregando...</p>
           ) : palavrasFiltradas.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">

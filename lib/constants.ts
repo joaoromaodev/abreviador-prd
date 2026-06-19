@@ -1,9 +1,9 @@
 import type { Configuracoes } from "./types";
 
 export const STORAGE_KEYS = {
-  palavras: "abreviador-prd:palavras",
-  configuracoes: "abreviador-prd:configuracoes",
-  modelos: "abreviador-prd:modelos",
+  // Único uso restante do localStorage: passar o conteúdo de um modelo da aba "Modelos de
+  // PRDs" pra caixa de texto da aba "Abreviador" ao navegar entre as duas. Palavras,
+  // configurações e modelos em si ficam na planilha (lib/sheets/*), compartilhados pela equipe.
   rascunho: "abreviador-prd:rascunho",
 } as const;
 
