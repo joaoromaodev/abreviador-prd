@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aplicarAbreviacoes, verificarLimite } from "./abbreviation";
+import { aplicarAbreviacoes, dividirEmPedacos, verificarLimite } from "./abbreviation";
 import type { PalavraAbreviacao } from "./types";
 
 function entrada(palavra: string, abreviacao: string): PalavraAbreviacao {
@@ -119,5 +119,38 @@ describe("verificarLimite", () => {
     expect(resultado.cabe).toBe(false);
     expect(resultado.excedente).toBeGreaterThan(0);
     expect(resultado.excedente).toBe(abreviado.length - limite);
+  });
+});
+
+describe("dividirEmPedacos", () => {
+  it("divide o texto em pedaços do tamanho pedido", () => {
+    const texto = "a".repeat(700);
+    const pedacos = dividirEmPedacos(texto, 300);
+    expect(pedacos).toHaveLength(3);
+    expect(pedacos[0]).toHaveLength(300);
+    expect(pedacos[1]).toHaveLength(300);
+    expect(pedacos[2]).toHaveLength(100);
+  });
+
+  it("junta os pedaços de volta no texto original", () => {
+    const texto = "Lorem ipsum dolor sit amet ".repeat(20);
+    const pedacos = dividirEmPedacos(texto, 300);
+    expect(pedacos.join("")).toBe(texto);
+  });
+
+  it("retorna um único pedaço quando o texto é menor que o tamanho pedido", () => {
+    const pedacos = dividirEmPedacos("texto curto", 300);
+    expect(pedacos).toEqual(["texto curto"]);
+  });
+
+  it("retorna um pedaço vazio para texto vazio", () => {
+    expect(dividirEmPedacos("", 300)).toEqual([""]);
+  });
+
+  it("lida com texto cujo tamanho é múltiplo exato do tamanho do pedaço", () => {
+    const texto = "x".repeat(600);
+    const pedacos = dividirEmPedacos(texto, 300);
+    expect(pedacos).toHaveLength(2);
+    expect(pedacos.every((p) => p.length === 300)).toBe(true);
   });
 });

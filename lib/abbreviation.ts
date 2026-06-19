@@ -118,3 +118,14 @@ export function verificarLimite(texto: string, limite: number): ResultadoLimite 
     excedente: cabe ? 0 : tamanho - limite,
   };
 }
+
+/** Divide o texto em pedaços de até `tamanho` caracteres cada (o último pode ser menor). */
+export function dividirEmPedacos(texto: string, tamanho: number): string[] {
+  if (tamanho <= 0 || texto.length === 0) return [texto];
+
+  const pedacos: string[] = [];
+  for (let i = 0; i < texto.length; i += tamanho) {
+    pedacos.push(texto.slice(i, i + tamanho));
+  }
+  return pedacos;
+}

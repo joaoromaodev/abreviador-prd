@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { aplicarAbreviacoes, verificarLimite } from "@/lib/abbreviation";
+import { useEffect, useMemo, useState } from "react";
+import { aplicarAbreviacoes, dividirEmPedacos, verificarLimite } from "@/lib/abbreviation";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { readStorage, removeStorage } from "@/lib/storage";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { usePalavras } from "@/hooks/usePalavras";
 import { AreaTexto, Botao, Card, Rotulo } from "@/components/ui";
+
+const TAMANHO_PEDACO_COPIA = 300;
 
 export default function PaginaAbreviador() {
   const { palavras, carregando: carregandoPalavras, erro: erroPalavras } = usePalavras();
@@ -15,6 +17,7 @@ export default function PaginaAbreviador() {
   const [textoEntrada, setTextoEntrada] = useState("");
   const [resultado, setResultado] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [pedacoCopiado, setPedacoCopiado] = useState<number | null>(null);
 
   // Carrega, uma única vez ao montar, um rascunho deixado pela aba "Modelos de PRDs"
   // (botão "Usar como modelo"). É uma leitura única de uma fonte externa no mount, não um
@@ -50,7 +53,21 @@ export default function PaginaAbreviador() {
     }
   }
 
+  async function handleCopiarPedaco(indice: number, pedaco: string) {
+    try {
+      await navigator.clipboard.writeText(pedaco);
+      setPedacoCopiado(indice);
+      setTimeout(() => setPedacoCopiado((atual) => (atual === indice ? null : atual)), 2000);
+    } catch {
+      // Clipboard API indisponível (ex.: contexto não seguro) — usuário pode selecionar o texto manualmente.
+    }
+  }
+
   const limiteInfo = resultado !== null ? verificarLimite(resultado, config.limiteCaracteres) : null;
+  const pedacos = useMemo(
+    () => (resultado !== null ? dividirEmPedacos(resultado, TAMANHO_PEDACO_COPIA) : []),
+    [resultado]
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -119,6 +136,36 @@ export default function PaginaAbreviador() {
             <Botao type="button" variante="secundario" onClick={handleCopiar}>
               {copiado ? "Copiado!" : "Copiar texto"}
             </Botao>
+          </div>
+
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <h2 className="text-sm font-medium text-gray-700">
+              Copiar em partes de {TAMANHO_PEDACO_COPIA} caracteres
+            </h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Útil quando o destino só aceita colar até {TAMANHO_PEDACO_COPIA} caracteres por vez.
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              {pedacos.map((pedaco, indice) => (
+                <div
+                  key={indice}
+                  className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2"
+                >
+                  <span className="shrink-0 text-xs font-medium text-gray-500">
+                    Parte {indice + 1}/{pedacos.length} ({pedaco.length})
+                  </span>
+                  <span className="flex-1 truncate text-xs text-gray-600">{pedaco}</span>
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    className="shrink-0"
+                    onClick={() => handleCopiarPedaco(indice, pedaco)}
+                  >
+                    {pedacoCopiado === indice ? "Copiado!" : "Copiar"}
+                  </Botao>
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       )}
