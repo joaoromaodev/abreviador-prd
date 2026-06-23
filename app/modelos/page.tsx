@@ -1,165 +1,198 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { writeStorage } from "@/lib/storage";
-import type { ModeloPRD } from "@/lib/types";
-import { useModelos } from "@/hooks/useModelos";
-import { AreaTexto, Botao, CampoTexto, Card, Rotulo } from "@/components/ui";
+import { extrairCampos, renderizar, rotuloCampo } from "@/lib/template";
+import { useContratos } from "@/hooks/useContratos";
+import { useTipos } from "@/hooks/useTipos";
+import { Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
 
-export default function PaginaModelos() {
+export default function PaginaGerar() {
   const router = useRouter();
-  const { modelos, carregando, erro: erroCarregamento, adicionar, editar, remover } = useModelos();
+  const { tipos, carregando: carregandoTipos, erro: erroTipos } = useTipos();
+  const { contratos, carregando: carregandoContratos, erro: erroContratos } = useContratos();
 
-  const [nomeForm, setNomeForm] = useState("");
-  const [conteudoForm, setConteudoForm] = useState("");
-  const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
+  const [tipoId, setTipoId] = useState("");
+  const [contratoId, setContratoId] = useState("");
+  const [valoresMensais, setValoresMensais] = useState<Record<string, string>>({});
+  const [copiado, setCopiado] = useState(false);
 
-  function limparFormulario() {
-    setNomeForm("");
-    setConteudoForm("");
-    setEditandoId(null);
-    setErro(null);
+  const tipoSelecionado = useMemo(() => tipos.find((t) => t.id === tipoId) ?? null, [tipos, tipoId]);
+  const contratosDoTipo = useMemo(
+    () => (tipoId ? contratos.filter((c) => c.tipoId === tipoId) : []),
+    [contratos, tipoId]
+  );
+  const contratoSelecionado = useMemo(
+    () => contratosDoTipo.find((c) => c.id === contratoId) ?? null,
+    [contratosDoTipo, contratoId]
+  );
+
+  const camposMensais = useMemo(
+    () => (tipoSelecionado ? extrairCampos(tipoSelecionado.template).mensais : []),
+    [tipoSelecionado]
+  );
+
+  const resultado = useMemo(() => {
+    if (!tipoSelecionado || !contratoSelecionado) return null;
+    return renderizar(tipoSelecionado.template, {
+      valoresMensais,
+      valoresContrato: contratoSelecionado.valores,
+      temTermoAditivo: contratoSelecionado.temTermoAditivo,
+      quantidadeTermosAditivos: contratoSelecionado.quantidadeTermosAditivos,
+    });
+  }, [tipoSelecionado, contratoSelecionado, valoresMensais]);
+
+  function handleTrocarTipo(novoTipoId: string) {
+    setTipoId(novoTipoId);
+    setContratoId("");
+    setValoresMensais({});
+    setCopiado(false);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const nome = nomeForm.trim();
-    const conteudo = conteudoForm.trim();
+  function setValorMensal(campo: string, valor: string) {
+    setValoresMensais((atual) => ({ ...atual, [campo]: valor }));
+    setCopiado(false);
+  }
 
-    if (!nome || !conteudo) {
-      setErro("Preencha o nome e o conteúdo do modelo.");
-      return;
-    }
-
-    setErro(null);
-    setSalvando(true);
+  async function handleCopiar() {
+    if (!resultado) return;
     try {
-      if (editandoId) {
-        await editar(editandoId, { nome, conteudo });
-      } else {
-        await adicionar({ nome, conteudo });
-      }
-      limparFormulario();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao salvar.");
-    } finally {
-      setSalvando(false);
+      await navigator.clipboard.writeText(resultado);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      // Clipboard indisponível — usuário pode selecionar manualmente.
     }
   }
 
-  function handleEditar(modelo: ModeloPRD) {
-    setEditandoId(modelo.id);
-    setNomeForm(modelo.nome);
-    setConteudoForm(modelo.conteudo);
-    setErro(null);
-  }
-
-  async function handleRemover(modelo: ModeloPRD) {
-    const confirmou = window.confirm(`Remover o modelo "${modelo.nome}"?`);
-    if (!confirmou) return;
-    try {
-      await remover(modelo.id);
-      if (editandoId === modelo.id) limparFormulario();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao remover.");
-    }
-  }
-
-  function handleUsarComoModelo(modelo: ModeloPRD) {
-    writeStorage(STORAGE_KEYS.rascunho, modelo.conteudo);
+  function handleEnviarAbreviador() {
+    if (!resultado) return;
+    writeStorage(STORAGE_KEYS.rascunho, resultado);
     router.push("/");
   }
+
+  const semTipos = !carregandoTipos && tipos.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Modelos de PRDs</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Modelos de PRD</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Salve modelos prontos de PRD (compartilhados com a equipe) e carregue um deles como ponto de partida na
-          aba Abreviador.
+          Escolha o tipo e o contrato, preencha os campos do mês e o texto é montado automaticamente. Depois, envie
+          direto para o Abreviador.
         </p>
       </div>
 
-      {erroCarregamento && (
+      {(erroTipos || erroContratos) && (
         <p role="alert" className="text-sm text-red-600">
-          {erroCarregamento}
+          {erroTipos ?? erroContratos}
         </p>
       )}
 
       <Card>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="max-w-md">
-            <Rotulo htmlFor="campo-nome-modelo">Nome do modelo</Rotulo>
-            <CampoTexto
-              id="campo-nome-modelo"
-              value={nomeForm}
-              onChange={(e) => setNomeForm(e.target.value)}
-              placeholder="ex.: PRD padrão de feature"
-            />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Rotulo htmlFor="gerar-tipo">Tipo de PRD</Rotulo>
+            <Selecao
+              id="gerar-tipo"
+              value={tipoId}
+              onChange={(e) => handleTrocarTipo(e.target.value)}
+              disabled={carregandoTipos}
+            >
+              <option value="">{carregandoTipos ? "Carregando..." : "Selecione um tipo"}</option>
+              {tipos.map((tipo) => (
+                <option key={tipo.id} value={tipo.id}>
+                  {tipo.nome}
+                </option>
+              ))}
+            </Selecao>
           </div>
           <div>
-            <Rotulo htmlFor="campo-conteudo-modelo">Conteúdo</Rotulo>
-            <AreaTexto
-              id="campo-conteudo-modelo"
-              rows={8}
-              value={conteudoForm}
-              onChange={(e) => setConteudoForm(e.target.value)}
-              placeholder="Texto base do modelo de PRD..."
-            />
+            <Rotulo htmlFor="gerar-contrato">Contrato</Rotulo>
+            <Selecao
+              id="gerar-contrato"
+              value={contratoId}
+              onChange={(e) => {
+                setContratoId(e.target.value);
+                setCopiado(false);
+              }}
+              disabled={!tipoSelecionado || carregandoContratos}
+            >
+              <option value="">
+                {!tipoSelecionado
+                  ? "Escolha o tipo primeiro"
+                  : carregandoContratos
+                    ? "Carregando..."
+                    : contratosDoTipo.length === 0
+                      ? "Nenhum contrato deste tipo"
+                      : "Selecione um contrato"}
+              </option>
+              {contratosDoTipo.map((contrato) => (
+                <option key={contrato.id} value={contrato.id}>
+                  {contrato.nome}
+                </option>
+              ))}
+            </Selecao>
           </div>
-          <div className="flex gap-2">
-            <Botao type="submit" disabled={salvando}>
-              {editandoId ? "Salvar edição" : "Adicionar modelo"}
-            </Botao>
-            {editandoId && (
-              <Botao type="button" variante="secundario" onClick={limparFormulario} disabled={salvando}>
-                Cancelar
-              </Botao>
-            )}
+        </div>
+
+        {semTipos && (
+          <p className="mt-4 text-sm text-gray-500">
+            Nenhum tipo cadastrado ainda. Crie um em <strong>Cadastros → Tipos de PRD</strong>.
+          </p>
+        )}
+
+        {tipoSelecionado && contratosDoTipo.length === 0 && !carregandoContratos && (
+          <p className="mt-4 text-sm text-gray-500">
+            Este tipo ainda não tem contratos. Cadastre um em <strong>Cadastros → Contratos</strong>.
+          </p>
+        )}
+
+        {contratoSelecionado && camposMensais.length > 0 && (
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <h2 className="text-sm font-medium text-gray-700">Campos do mês</h2>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              {camposMensais.map((campo) => (
+                <div key={campo}>
+                  <Rotulo htmlFor={`mensal-${campo}`}>{rotuloCampo(campo)}</Rotulo>
+                  <CampoTexto
+                    id={`mensal-${campo}`}
+                    value={valoresMensais[campo] ?? ""}
+                    onChange={(e) => setValorMensal(campo, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          {erro && (
-            <p role="alert" className="text-sm text-red-600">
-              {erro}
-            </p>
-          )}
-        </form>
+        )}
       </Card>
 
-      <div className="flex flex-col gap-4">
-        {carregando ? (
-          <p className="py-6 text-center text-sm text-gray-400">Carregando...</p>
-        ) : modelos.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">Nenhum modelo salvo ainda.</p>
-        ) : (
-          modelos.map((modelo) => (
-            <Card key={modelo.id}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-medium text-gray-900">{modelo.nome}</h2>
-                  <p className="mt-1 line-clamp-3 max-w-2xl whitespace-pre-wrap text-sm text-gray-500">
-                    {modelo.conteudo}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Botao type="button" onClick={() => handleUsarComoModelo(modelo)}>
-                    Usar como modelo
-                  </Botao>
-                  <Botao type="button" variante="secundario" onClick={() => handleEditar(modelo)}>
-                    Editar
-                  </Botao>
-                  <Botao type="button" variante="perigo" onClick={() => handleRemover(modelo)}>
-                    Remover
-                  </Botao>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
+      {resultado !== null && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Rotulo htmlFor="gerar-resultado" className="mb-0">
+              Texto gerado
+            </Rotulo>
+            <span className="text-sm text-gray-500">{resultado.length} caracteres</span>
+          </div>
+          <p
+            id="gerar-resultado"
+            className="mt-3 whitespace-pre-wrap rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800"
+          >
+            {resultado}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Botao type="button" onClick={handleEnviarAbreviador}>
+              Enviar para o Abreviador
+            </Botao>
+            <Botao type="button" variante="secundario" onClick={handleCopiar}>
+              {copiado ? "Copiado!" : "Copiar texto"}
+            </Botao>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

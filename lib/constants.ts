@@ -1,9 +1,9 @@
 import type { Configuracoes } from "./types";
 
 export const STORAGE_KEYS = {
-  // Único uso restante do localStorage: passar o conteúdo de um modelo da aba "Modelos de
-  // PRDs" pra caixa de texto da aba "Abreviador" ao navegar entre as duas. Palavras,
-  // configurações e modelos em si ficam na planilha (lib/sheets/*), compartilhados pela equipe.
+  // Único uso restante do localStorage: passar o texto gerado na aba "Modelos de PRD" pra caixa de
+  // texto da aba "Abreviador" ao navegar entre as duas. Palavras, tipos, contratos e
+  // configurações ficam na planilha (lib/sheets/*), compartilhados pela equipe.
   rascunho: "abreviador-prd:rascunho",
 } as const;
 
@@ -15,3 +15,11 @@ export const CONFIG_PADRAO: Configuracoes = {
 
 export const LIMITE_CARACTERES_MIN = 50;
 export const LIMITE_CARACTERES_MAX = 100000;
+
+// Tipo de PRD semeado automaticamente quando a aba "Tipos" da planilha está vazia,
+// para o time já começar com o modelo de Locação de Imóveis pronto (e editável na tela).
+export const TIPO_LOCACAO_PADRAO = {
+  nome: "Locação de Imóveis",
+  template:
+    "ESFERA:1-ORCAMENTO FISCAL UGR:160101, PLANO INTERNO:<<pi>>, ACAO:<<açao>>, FUNCIONAL PROGRAMATICA:<<programatica>>, PROJETO ATIVIDADE:<<projatv>>, PRODUTO:<<produto>>, NATUREZA DE DESPESA: {natdesp}, FONTE:<<fonte>>; PAGAMENTO REFERENTE AO CONTRATO Nº {contrato} <<termo>>; {modalidade}; PAGAMENTO REFERENTE AO PERIODO DE <<periodo>>; {textocontrato} / {textotermoadtivo}; OBJETO DO CONTRATO: {objdocontrato}.",
+} as const;

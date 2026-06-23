@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <NavBar />
         <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">{children}</main>
         <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
-          Os dados (palavras, configurações e modelos) ficam salvos apenas neste navegador.
+          Os dados (palavras, tipos, contratos e configurações) são compartilhados pela equipe via Google Sheets.
         </footer>
       </body>
     </html>

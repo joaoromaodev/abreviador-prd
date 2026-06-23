@@ -19,8 +19,8 @@ export default function PaginaAbreviador() {
   const [copiado, setCopiado] = useState(false);
   const [pedacoCopiado, setPedacoCopiado] = useState<number | null>(null);
 
-  // Carrega, uma única vez ao montar, um rascunho deixado pela aba "Modelos de PRDs"
-  // (botão "Usar como modelo"). É uma leitura única de uma fonte externa no mount, não um
+  // Carrega, uma única vez ao montar, um rascunho deixado pela aba "Modelos de PRD"
+  // (botão "Enviar para o Abreviador"). É uma leitura única de uma fonte externa no mount, não um
   // estado derivado de props/state — por isso o setState síncrono aqui é intencional.
   useEffect(() => {
     const rascunho = readStorage<string>(STORAGE_KEYS.rascunho, "");

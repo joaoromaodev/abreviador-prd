@@ -10,10 +10,24 @@ export interface Configuracoes {
   reaplicarAteEstabilizar: boolean;
 }
 
-export interface ModeloPRD {
+/** Tipo de PRD (ex.: "Locação de Imóveis"). Guarda o texto padrão com os marcadores `<<>>` e `{}`. */
+export interface TipoPRD {
   id: string;
   nome: string;
-  conteudo: string;
+  template: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/** Contrato cadastrado e amarrado a um tipo. `valores` guarda os campos `{}` do template do tipo. */
+export interface Contrato {
+  id: string;
+  tipoId: string;
+  /** Identificação para escolher o contrato (ex.: "Sede Administrativa - 123/2020"). */
+  nome: string;
+  temTermoAditivo: boolean;
+  quantidadeTermosAditivos: number;
+  valores: Record<string, string>;
   criadoEm: string;
   atualizadoEm: string;
 }
