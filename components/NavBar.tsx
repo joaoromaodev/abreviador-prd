@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSessao } from "./SessaoProvider";
 
-const ABAS = [
+const ABAS_BASE = [
   { href: "/", label: "Abreviador" },
   { href: "/modelos", label: "Modelos de PRD" },
-  { href: "/cadastros", label: "Cadastros" },
 ] as const;
+
+const ABAS_ADMIN = [{ href: "/cadastros", label: "Cadastros" }] as const;
 
 function abaAtiva(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
@@ -23,9 +25,16 @@ function IconeEngrenagem() {
   );
 }
 
+async function sair() {
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+  window.location.href = "/login";
+}
+
 export function NavBar() {
   const pathname = usePathname();
+  const { usuario, isAdmin } = useSessao();
   const configAtivo = pathname === "/configuracoes";
+  const abas = isAdmin ? [...ABAS_BASE, ...ABAS_ADMIN] : ABAS_BASE;
 
   return (
     <header className="border-b border-gray-200 bg-white">
@@ -34,21 +43,33 @@ export function NavBar() {
           <Link href="/" className="text-sm font-semibold text-gray-900">
             Abreviador de PRDs
           </Link>
-          <Link
-            href="/configuracoes"
-            aria-label="Configurações"
-            aria-current={configAtivo ? "page" : undefined}
-            title="Configurações"
-            className={`rounded-md p-2 transition-colors ${
-              configAtivo ? "bg-blue-50 text-blue-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-            }`}
-          >
-            <IconeEngrenagem />
-          </Link>
+          <div className="flex items-center gap-2">
+            {usuario && <span className="hidden text-xs text-gray-500 sm:inline">{usuario.nome}</span>}
+            {isAdmin && (
+              <Link
+                href="/configuracoes"
+                aria-label="Configurações"
+                aria-current={configAtivo ? "page" : undefined}
+                title="Configurações"
+                className={`rounded-md p-2 transition-colors ${
+                  configAtivo ? "bg-blue-50 text-blue-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                }`}
+              >
+                <IconeEngrenagem />
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={sair}
+              className="rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
+              Sair
+            </button>
+          </div>
         </div>
         <nav aria-label="Navegação principal">
           <ul className="flex flex-wrap gap-1">
-            {ABAS.map((aba) => {
+            {abas.map((aba) => {
               const ativo = abaAtiva(pathname, aba.href);
               return (
                 <li key={aba.href}>

@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
+import { exigirAdmin } from "@/lib/auth/guard";
 import { atualizarTipo, removerTipo } from "@/lib/sheets/tipos";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guarda = await exigirAdmin();
+  if ("resposta" in guarda) return guarda.resposta;
   try {
     const { id } = await params;
     const corpo = await request.json();
@@ -24,6 +27,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guarda = await exigirAdmin();
+  if ("resposta" in guarda) return guarda.resposta;
   try {
     const { id } = await params;
     const removido = await removerTipo(id);

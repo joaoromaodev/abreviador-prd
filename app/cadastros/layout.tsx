@@ -1,17 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
+import { useSessao } from "@/components/SessaoProvider";
 
 const SUBABAS = [
   { href: "/cadastros/contratos", label: "Contratos" },
   { href: "/cadastros/tipos", label: "Tipos de PRD" },
   { href: "/cadastros/palavras", label: "Palavras / Abreviações" },
+  { href: "/cadastros/usuarios", label: "Usuários" },
 ] as const;
 
 export default function LayoutCadastros({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAdmin, carregando } = useSessao();
+
+  // Área restrita a administradores: usuário comum é mandado de volta para a Home.
+  useEffect(() => {
+    if (!carregando && !isAdmin) router.replace("/");
+  }, [carregando, isAdmin, router]);
+
+  if (carregando || !isAdmin) {
+    return <p className="py-10 text-center text-sm text-gray-400">Carregando...</p>;
+  }
 
   return (
     <div className="flex flex-col gap-6">

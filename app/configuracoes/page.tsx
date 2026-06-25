@@ -1,13 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { CONFIG_PADRAO, LIMITE_CARACTERES_MAX, LIMITE_CARACTERES_MIN } from "@/lib/constants";
 import type { Configuracoes } from "@/lib/types";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { useSessao } from "@/components/SessaoProvider";
 import { Botao, CampoTexto, Card, Rotulo } from "@/components/ui";
 
 export default function PaginaConfiguracoes() {
+  const router = useRouter();
+  const { isAdmin, carregando: carregandoSessao } = useSessao();
   const { config, carregando, erro: erroCarregamento, salvar } = useConfiguracoes();
+
+  // Configurações são restritas a administradores.
+  useEffect(() => {
+    if (!carregandoSessao && !isAdmin) router.replace("/");
+  }, [carregandoSessao, isAdmin, router]);
+
+  if (carregandoSessao || !isAdmin) {
+    return <p className="py-10 text-center text-sm text-gray-400">Carregando...</p>;
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
+import { exigirAdmin, exigirSessao } from "@/lib/auth/guard";
 import { LIMITE_CARACTERES_MAX, LIMITE_CARACTERES_MIN } from "@/lib/constants";
 import { obterConfiguracoes, salvarConfiguracoes } from "@/lib/sheets/configuracoes";
 
 export async function GET() {
+  const guarda = await exigirSessao();
+  if ("resposta" in guarda) return guarda.resposta;
   try {
     return NextResponse.json(await obterConfiguracoes());
   } catch (erro) {
@@ -12,6 +15,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const guarda = await exigirAdmin();
+  if ("resposta" in guarda) return guarda.resposta;
   try {
     const corpo = await request.json();
     const limite = Number(corpo?.limiteCaracteres);

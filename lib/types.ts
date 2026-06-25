@@ -10,6 +10,15 @@ export interface Configuracoes {
   reaplicarAteEstabilizar: boolean;
 }
 
+/** Usuário do sistema. O e-mail (minúsculo) é a chave; `papel` define o que pode fazer. */
+export interface Usuario {
+  email: string;
+  nome: string;
+  papel: "admin" | "usuario";
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
 /** Tipo de PRD (ex.: "Locação de Imóveis"). Guarda o texto padrão com os marcadores `<<>>` e `{}`. */
 export interface TipoPRD {
   id: string;
