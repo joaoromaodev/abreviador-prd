@@ -8,6 +8,8 @@ export interface DadosFormContrato {
   nome: string;
   temTermoAditivo: boolean;
   quantidadeTermosAditivos: number;
+  vigenciaInicio: string;
+  vigenciaFim: string;
   valores: Record<string, string>;
 }
 

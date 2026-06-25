@@ -2,10 +2,12 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { extrairCampos, rotuloCampo, TOKEN_TEXTO_CONTRATO, TOKEN_TEXTO_TA } from "@/lib/template";
+import { hojeISO } from "@/lib/vigencia";
 import type { Contrato } from "@/lib/types";
 import { useContratos } from "@/hooks/useContratos";
 import { useTipos } from "@/hooks/useTipos";
 import { AreaTexto, Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
+import { EtiquetaVigencia } from "@/components/EtiquetaVigencia";
 
 /** Campos de texto longo ganham um textarea no formulário; o resto, um input de uma linha. */
 function ehCampoLongo(nome: string): boolean {
@@ -17,6 +19,8 @@ const ESTADO_INICIAL = {
   nome: "",
   temTermoAditivo: false,
   quantidade: "1",
+  vigenciaInicio: "",
+  vigenciaFim: "",
 };
 
 export default function PaginaContratos() {
@@ -27,11 +31,14 @@ export default function PaginaContratos() {
   const [nome, setNome] = useState(ESTADO_INICIAL.nome);
   const [temTermoAditivo, setTemTermoAditivo] = useState(ESTADO_INICIAL.temTermoAditivo);
   const [quantidade, setQuantidade] = useState(ESTADO_INICIAL.quantidade);
+  const [vigenciaInicio, setVigenciaInicio] = useState(ESTADO_INICIAL.vigenciaInicio);
+  const [vigenciaFim, setVigenciaFim] = useState(ESTADO_INICIAL.vigenciaFim);
   const [valores, setValores] = useState<Record<string, string>>({});
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  const hoje = useMemo(() => hojeISO(), []);
   const tiposPorId = useMemo(() => new Map(tipos.map((t) => [t.id, t])), [tipos]);
   const tipoSelecionado = tiposPorId.get(tipoId) ?? null;
 
@@ -54,6 +61,8 @@ export default function PaginaContratos() {
     setNome(ESTADO_INICIAL.nome);
     setTemTermoAditivo(ESTADO_INICIAL.temTermoAditivo);
     setQuantidade(ESTADO_INICIAL.quantidade);
+    setVigenciaInicio(ESTADO_INICIAL.vigenciaInicio);
+    setVigenciaFim(ESTADO_INICIAL.vigenciaFim);
     setValores({});
     setEditandoId(null);
     setErro(null);
@@ -94,6 +103,8 @@ export default function PaginaContratos() {
         nome: nome.trim(),
         temTermoAditivo,
         quantidadeTermosAditivos: quantidadeNum,
+        vigenciaInicio,
+        vigenciaFim,
         valores: valoresFinais,
       };
       if (editandoId) {
@@ -115,6 +126,8 @@ export default function PaginaContratos() {
     setNome(contrato.nome);
     setTemTermoAditivo(contrato.temTermoAditivo);
     setQuantidade(String(contrato.quantidadeTermosAditivos || 1));
+    setVigenciaInicio(contrato.vigenciaInicio ?? "");
+    setVigenciaFim(contrato.vigenciaFim ?? "");
     setValores(contrato.valores);
     setErro(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -175,6 +188,27 @@ export default function PaginaContratos() {
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="ex.: Sede Administrativa - 123/2020"
               />
+            </div>
+            <div>
+              <Rotulo htmlFor="campo-vigencia-inicio">Vigência — início</Rotulo>
+              <CampoTexto
+                id="campo-vigencia-inicio"
+                type="date"
+                value={vigenciaInicio}
+                onChange={(e) => setVigenciaInicio(e.target.value)}
+              />
+            </div>
+            <div>
+              <Rotulo htmlFor="campo-vigencia-fim">Vigência — fim</Rotulo>
+              <CampoTexto
+                id="campo-vigencia-fim"
+                type="date"
+                value={vigenciaFim}
+                onChange={(e) => setVigenciaFim(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Usada para avisar quando o contrato está vencendo ou expirado.
+              </p>
             </div>
           </div>
 
@@ -289,7 +323,10 @@ export default function PaginaContratos() {
             <Card key={contrato.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="font-medium text-gray-900">{contrato.nome}</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-medium text-gray-900">{contrato.nome}</h2>
+                    <EtiquetaVigencia vigenciaFim={contrato.vigenciaFim} hoje={hoje} />
+                  </div>
                   <p className="mt-1 text-xs text-gray-500">
                     {tiposPorId.get(contrato.tipoId)?.nome ?? "Tipo removido"}
                     {contrato.temTermoAditivo

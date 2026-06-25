@@ -3,13 +3,26 @@ import type { Contrato } from "@/lib/types";
 import { adicionarLinha, atualizarLinha, lerLinhas, removerLinha, type Registro } from "./table";
 
 const ABA = "Contratos";
-const COLUNAS = ["id", "tipoId", "nome", "temTermoAditivo", "quantidadeTermosAditivos", "valores", "criadoEm", "atualizadoEm"];
+const COLUNAS = [
+  "id",
+  "tipoId",
+  "nome",
+  "temTermoAditivo",
+  "quantidadeTermosAditivos",
+  "vigenciaInicio",
+  "vigenciaFim",
+  "valores",
+  "criadoEm",
+  "atualizadoEm",
+];
 
 export interface DadosContrato {
   tipoId: string;
   nome: string;
   temTermoAditivo: boolean;
   quantidadeTermosAditivos: number;
+  vigenciaInicio: string;
+  vigenciaFim: string;
   valores: Record<string, string>;
 }
 
@@ -31,6 +44,8 @@ function paraContrato(registro: Registro): Contrato {
     nome: registro.nome,
     temTermoAditivo: registro.temTermoAditivo === "true",
     quantidadeTermosAditivos: Number.isFinite(quantidade) ? quantidade : 0,
+    vigenciaInicio: registro.vigenciaInicio,
+    vigenciaFim: registro.vigenciaFim,
     valores: lerValores(registro.valores),
     criadoEm: registro.criadoEm,
     atualizadoEm: registro.atualizadoEm,
@@ -43,6 +58,8 @@ function paraCampos(dados: DadosContrato): Registro {
     nome: dados.nome,
     temTermoAditivo: String(dados.temTermoAditivo),
     quantidadeTermosAditivos: String(dados.quantidadeTermosAditivos),
+    vigenciaInicio: dados.vigenciaInicio,
+    vigenciaFim: dados.vigenciaFim,
     valores: JSON.stringify(dados.valores),
   };
 }

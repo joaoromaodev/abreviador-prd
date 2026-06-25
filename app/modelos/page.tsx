@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { writeStorage } from "@/lib/storage";
 import { extrairCampos, renderizar, rotuloCampo } from "@/lib/template";
+import { analisarVigencia, formatarData, hojeISO } from "@/lib/vigencia";
 import { useContratos } from "@/hooks/useContratos";
 import { useTipos } from "@/hooks/useTipos";
 import { Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
@@ -18,7 +19,9 @@ export default function PaginaGerar() {
   const [contratoId, setContratoId] = useState("");
   const [valoresMensais, setValoresMensais] = useState<Record<string, string>>({});
   const [copiado, setCopiado] = useState(false);
+  const [gerarMesmoAssim, setGerarMesmoAssim] = useState(false);
 
+  const hoje = useMemo(() => hojeISO(), []);
   const tipoSelecionado = useMemo(() => tipos.find((t) => t.id === tipoId) ?? null, [tipos, tipoId]);
   const contratosDoTipo = useMemo(
     () => (tipoId ? contratos.filter((c) => c.tipoId === tipoId) : []),
@@ -33,6 +36,13 @@ export default function PaginaGerar() {
     () => (tipoSelecionado ? extrairCampos(tipoSelecionado.template).mensais : []),
     [tipoSelecionado]
   );
+
+  const vigencia = useMemo(
+    () => (contratoSelecionado ? analisarVigencia(contratoSelecionado.vigenciaFim, hoje) : null),
+    [contratoSelecionado, hoje]
+  );
+  // Contrato expirado: avisa e só libera a geração se o usuário confirmar.
+  const bloqueadoPorVigencia = vigencia?.status === "expirado" && !gerarMesmoAssim;
 
   const resultado = useMemo(() => {
     if (!tipoSelecionado || !contratoSelecionado) return null;
@@ -49,6 +59,13 @@ export default function PaginaGerar() {
     setContratoId("");
     setValoresMensais({});
     setCopiado(false);
+    setGerarMesmoAssim(false);
+  }
+
+  function handleTrocarContrato(novoContratoId: string) {
+    setContratoId(novoContratoId);
+    setCopiado(false);
+    setGerarMesmoAssim(false);
   }
 
   function setValorMensal(campo: string, valor: string) {
@@ -114,10 +131,7 @@ export default function PaginaGerar() {
             <Selecao
               id="gerar-contrato"
               value={contratoId}
-              onChange={(e) => {
-                setContratoId(e.target.value);
-                setCopiado(false);
-              }}
+              onChange={(e) => handleTrocarContrato(e.target.value)}
               disabled={!tipoSelecionado || carregandoContratos}
             >
               <option value="">
@@ -150,6 +164,43 @@ export default function PaginaGerar() {
           </p>
         )}
 
+        {contratoSelecionado && vigencia && (
+          <>
+            {vigencia.status === "expirado" && (
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <p className="font-semibold">
+                  Contrato expirado em {formatarData(contratoSelecionado.vigenciaFim)} (há{" "}
+                  {Math.abs(vigencia.diasRestantes ?? 0)} dia(s)).
+                </p>
+                <p className="mt-1">Recomendamos não gerar PRD para um contrato vencido.</p>
+                <label className="mt-3 flex items-center gap-2 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={gerarMesmoAssim}
+                    onChange={(e) => setGerarMesmoAssim(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  />
+                  Gerar mesmo assim
+                </label>
+              </div>
+            )}
+            {vigencia.status === "vencendo" && (
+              <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Atenção: este contrato vence em {formatarData(contratoSelecionado.vigenciaFim)} (faltam{" "}
+                {vigencia.diasRestantes} dia(s)).
+              </div>
+            )}
+            {vigencia.status === "vigente" && (
+              <p className="mt-4 text-sm text-green-700">
+                Contrato vigente até {formatarData(contratoSelecionado.vigenciaFim)}.
+              </p>
+            )}
+            {vigencia.status === "sem_data" && (
+              <p className="mt-4 text-sm text-gray-500">Vigência não informada para este contrato.</p>
+            )}
+          </>
+        )}
+
         {contratoSelecionado && camposMensais.length > 0 && (
           <div className="mt-6 border-t border-gray-200 pt-4">
             <h2 className="text-sm font-medium text-gray-700">Campos do mês</h2>
@@ -169,7 +220,7 @@ export default function PaginaGerar() {
         )}
       </Card>
 
-      {resultado !== null && (
+      {resultado !== null && !bloqueadoPorVigencia && (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Rotulo htmlFor="gerar-resultado" className="mb-0">

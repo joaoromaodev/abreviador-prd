@@ -13,11 +13,20 @@ export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
   const quantidadeTermosAditivos =
     temTermoAditivo && Number.isFinite(quantidadeBruta) && quantidadeBruta > 0 ? Math.floor(quantidadeBruta) : 0;
 
+  const vigenciaInicio = dataIso(dados?.vigenciaInicio);
+  const vigenciaFim = dataIso(dados?.vigenciaFim);
+
   const valoresBrutos = (dados?.valores ?? {}) as Record<string, unknown>;
   const valores: Record<string, string> = {};
   for (const [chave, valor] of Object.entries(valoresBrutos)) {
     valores[chave] = String(valor ?? "");
   }
 
-  return { tipoId, nome, temTermoAditivo, quantidadeTermosAditivos, valores };
+  return { tipoId, nome, temTermoAditivo, quantidadeTermosAditivos, vigenciaInicio, vigenciaFim, valores };
+}
+
+/** Aceita só datas no formato ISO "YYYY-MM-DD"; qualquer outra coisa vira "" (vigência não informada). */
+function dataIso(valor: unknown): string {
+  const texto = String(valor ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(texto) ? texto : "";
 }

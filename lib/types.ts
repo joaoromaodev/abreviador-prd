@@ -27,6 +27,9 @@ export interface Contrato {
   nome: string;
   temTermoAditivo: boolean;
   quantidadeTermosAditivos: number;
+  /** Vigência do contrato em ISO "YYYY-MM-DD" (vazio se não informada). */
+  vigenciaInicio: string;
+  vigenciaFim: string;
   valores: Record<string, string>;
   criadoEm: string;
   atualizadoEm: string;
