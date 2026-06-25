@@ -58,9 +58,11 @@ export interface DadosRender {
   quantidadeTermosAditivos: number;
 }
 
-/** Remove espaços duplicados e espaços antes de pontuação que sobram quando um campo fica vazio. */
+/** Limpa artefatos de campos vazios: segmentos ";" vazios, espaços duplicados e espaços antes de pontuação. */
 function limpar(texto: string): string {
   return texto
+    // Campo condicional ausente (ex.: termo aditivo) deixa um segmento vazio entre ";": colapsa em um só.
+    .replace(/;(?:\s*;)+/g, ";")
     .replace(/ {2,}/g, " ")
     .replace(/ +([;,.])/g, "$1")
     .trim();

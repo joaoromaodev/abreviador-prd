@@ -21,5 +21,5 @@ export const LIMITE_CARACTERES_MAX = 100000;
 export const TIPO_LOCACAO_PADRAO = {
   nome: "Locação de Imóveis",
   template:
-    "ESFERA:1-ORCAMENTO FISCAL UGR:160101, PLANO INTERNO:<<pi>>, ACAO:<<açao>>, FUNCIONAL PROGRAMATICA:<<programatica>>, PROJETO ATIVIDADE:<<projatv>>, PRODUTO:<<produto>>, NATUREZA DE DESPESA: {natdesp}, FONTE:<<fonte>>; PAGAMENTO REFERENTE AO CONTRATO Nº {contrato} <<termo>>; {modalidade}; PAGAMENTO REFERENTE AO PERIODO DE <<periodo>>; {textocontrato} / {textotermoadtivo}; OBJETO DO CONTRATO: {objdocontrato}.",
+    "ESFERA:1-ORCAMENTO FISCAL UGR:160101, PLANO INTERNO:<<pi>>, ACAO:<<açao>>, FUNCIONAL PROGRAMATICA:<<programatica>>, PROJETO ATIVIDADE:<<projatv>>, PRODUTO:<<produto>>, NATUREZA DE DESPESA: {natdesp}, FONTE:<<fonte>>; PAGAMENTO REFERENTE AO CONTRATO Nº {contrato} <<termo>>; {modalidade}; PAGAMENTO REFERENTE AO PERIODO DE <<periodo>>; {textotermoadtivo}; OBJETO DO CONTRATO: {objdocontrato}.",
 } as const;

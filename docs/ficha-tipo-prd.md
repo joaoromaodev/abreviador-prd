@@ -74,7 +74,7 @@ que pegam casos de borda que ninguém lembrou de descrever.
    FUNCIONAL PROGRAMATICA:<<programatica>>, PROJETO ATIVIDADE:<<projatv>>, PRODUTO:<<produto>>,
    NATUREZA DE DESPESA: {natdesp}, FONTE:<<fonte>>; PAGAMENTO REFERENTE AO CONTRATO Nº {contrato}
    <<termo>>; {modalidade}; PAGAMENTO REFERENTE AO PERIODO DE <<periodo>>;
-   {textocontrato} / {textotermoadtivo}; OBJETO DO CONTRATO: {objdocontrato}."
+   {textotermoadtivo}; OBJETO DO CONTRATO: {objdocontrato}."
 
 3. CAMPOS MENSAIS  <<campo>>:
    <<pi>>           → "Plano Interno"           | exemplo: 1234
@@ -89,19 +89,17 @@ que pegam casos de borda que ninguém lembrou de descrever.
    {natdesp}          → "Natureza de Despesa"     | linha curta | ex.: 33903600
    {contrato}         → "Nº do Contrato"          | linha curta | ex.: 123/2020
    {modalidade}       → "Modalidade"              | linha curta | ex.: DISPENSA DE LICITACAO
-   {textocontrato}    → "Texto do Contrato"       | texto longo | ex.: CONTRATO DE LOCACAO
    {textotermoadtivo} → "Texto do Termo Aditivo"  | texto longo | ex.: 8 TERMO ADITIVO
    {objdocontrato}    → "Objeto do Contrato"      | texto longo | ex.: LOCACAO DE IMOVEL PARA A SEDE
 
 5. REGRAS CONDICIONAIS:
    SE o contrato NÃO tem termo aditivo
       ENTÃO remove o "<<termo>>" (vira "Nº {contrato};")
-      E usa só {textocontrato} (remove o " / {textotermoadtivo}").
+      E o segmento "{textotermoadtivo}" some por completo (sem deixar ";" órfão).
 
    SE o contrato TEM termo aditivo
       ENTÃO "<<termo>>" vira "(Nº T.A)" — ex.: "(8º T.A)", com o número vindo do cadastro
-      do contrato — E usa só {textotermoadtivo} (remove o "{textocontrato} / ").
-      → Ou seja: ou o texto do contrato, ou o do termo aditivo, NUNCA os dois.
+      do contrato — E o segmento "{textotermoadtivo}" é preenchido com o texto do termo aditivo.
 
 6. FORMATOS ESPECIAIS / OBSERVAÇÕES:
    - Período é texto livre: aceita DD/MM/YYYY ou DD/MMMM (ex.: "01/06/2026" ou "01/junho").

@@ -88,9 +88,11 @@ export default function PaginaTipos() {
           </li>
           <li>
             Reservados: <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">&lt;&lt;termo&gt;&gt;</code>{" "}
-            vira <em>(Nº T.A)</em> quando há termo aditivo. No par{" "}
-            <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"{textocontrato} / {textotermoadtivo}"}</code>{" "}
-            o sistema usa só um dos dois: o texto do contrato (sem T.A.) ou o do termo aditivo (com T.A.).
+            vira <em>(Nº T.A)</em> quando há termo aditivo;{" "}
+            <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"{textotermoadtivo}"}</code> só aparece
+            quando o contrato tem termo aditivo (senão o segmento some sozinho). Se um tipo usar{" "}
+            <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"{textocontrato}"}</code>, é o oposto:
+            aparece só quando <strong>não</strong> há termo aditivo.
           </li>
         </ul>
       </div>
