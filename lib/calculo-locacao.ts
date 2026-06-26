@@ -1,10 +1,11 @@
-// Calculadora de Locação: separa um valor total entre os "meses cheios" e as "diárias" do
-// mês incompleto de um período.
+// Calculadora de Locação: a partir do VALOR MENSAL e do período, calcula o valor dos meses
+// cheios, o valor das diárias do(s) mês(es) incompleto(s) e o total a pagar.
 //
 // Regra (definida pela equipe):
-//   - diária  = total / 30 (SEMPRE 30, independente do mês), truncado pra baixo em 2 casas.
-//   - valor das diárias = diária * (dias do mês incompleto).
-//   - valor dos meses cheios = total - valor das diárias.
+//   - diária = valor mensal / 30 (SEMPRE 30, independente do mês), truncado pra baixo em 2 casas.
+//   - valor das diárias  = diária * (dias do mês incompleto).
+//   - valor dos meses cheios = valor mensal * (qtd de meses cheios).
+//   - total a pagar = valor dos meses cheios + valor das diárias.
 
 export interface ResultadoLocacao {
   mesesCheios: number;
@@ -12,6 +13,7 @@ export interface ResultadoLocacao {
   valorDiaria: number;
   valorDiarias: number;
   valorMesesCheios: number;
+  valorTotal: number;
 }
 
 /** Trunca pra baixo em 2 casas (com um epsilon contra imprecisão de ponto flutuante). */
@@ -35,14 +37,18 @@ function parseISO(iso: string): DataSimples | null {
   return { ano: Number(m[1]), mes: Number(m[2]), dia: Number(m[3]) };
 }
 
-/** Quantos dias tem o mês (mes 1-based). */
+/** Quantos dias o mês realmente tem (mes 1-based; respeita ano bissexto). */
 function diasNoMes(ano: number, mes: number): number {
   return new Date(ano, mes, 0).getDate();
 }
 
 /**
- * Deriva "meses cheios" e "dias do mês incompleto" de um período (datas ISO), assumindo início
- * no dia 1º. Se o fim cair no último dia do mês, esse mês conta como cheio. Retorna null se inválido.
+ * Deriva "meses cheios" e "dias incompletos" de um período (datas ISO).
+ *   - Mês inicial que não começa no dia 1º é incompleto: conta do dia de início até o dia 30
+ *     (base 30 sempre — ex.: 27/fev gera 4 dias: 27, 28, 29, 30).
+ *   - Mês final que não termina no último dia real do mês é incompleto: conta do dia 1 até o
+ *     dia de fim (ex.: 28/fev em ano comum é o último dia → mês cheio; 27/fev → 27 dias).
+ * Retorna null se as datas forem inválidas.
  */
 export function derivarPeriodo(
   inicioISO: string,
@@ -52,19 +58,54 @@ export function derivarPeriodo(
   const fim = parseISO(fimISO);
   if (!ini || !fim || fimISO < inicioISO) return null;
 
-  const mesesEntre = (fim.ano - ini.ano) * 12 + (fim.mes - ini.mes);
-  const fimEhFimDeMes = fim.dia === diasNoMes(fim.ano, fim.mes);
-
-  if (fimEhFimDeMes) {
-    return { mesesCheios: mesesEntre + 1, diasIncompletos: 0 };
+  // Período curto dentro de um único mês: conta os dias ocupados direto.
+  if (ini.ano === fim.ano && ini.mes === fim.mes) {
+    return { mesesCheios: 0, diasIncompletos: fim.dia - ini.dia + 1 };
   }
-  return { mesesCheios: mesesEntre, diasIncompletos: fim.dia };
+
+  let diasIncompletos = 0;
+  let primeiroAno = ini.ano;
+  let primeiroMes = ini.mes;
+  let ultimoAno = fim.ano;
+  let ultimoMes = fim.mes;
+
+  // Mês inicial incompleto (não começa no dia 1º).
+  if (ini.dia > 1) {
+    diasIncompletos += 30 - ini.dia + 1;
+    if (primeiroMes === 12) {
+      primeiroMes = 1;
+      primeiroAno += 1;
+    } else {
+      primeiroMes += 1;
+    }
+  }
+
+  // Mês final incompleto (não termina no último dia real do mês).
+  if (fim.dia < diasNoMes(fim.ano, fim.mes)) {
+    diasIncompletos += fim.dia;
+    if (ultimoMes === 1) {
+      ultimoMes = 12;
+      ultimoAno -= 1;
+    } else {
+      ultimoMes -= 1;
+    }
+  }
+
+  let mesesCheios = (ultimoAno - primeiroAno) * 12 + (ultimoMes - primeiroMes) + 1;
+  if (mesesCheios < 0) mesesCheios = 0;
+
+  return { mesesCheios, diasIncompletos };
 }
 
-/** Faz a conta da locação. Só `total` e `diasIncompletos` afetam os valores; `mesesCheios` é informativo. */
-export function calcularLocacao(total: number, diasIncompletos: number, mesesCheios: number): ResultadoLocacao {
-  const valorDiaria = truncar2(total / 30);
+/** Faz a conta da locação a partir do valor mensal. */
+export function calcularLocacao(
+  valorMensal: number,
+  diasIncompletos: number,
+  mesesCheios: number
+): ResultadoLocacao {
+  const valorDiaria = truncar2(valorMensal / 30);
   const valorDiarias = arredondar2(valorDiaria * diasIncompletos);
-  const valorMesesCheios = arredondar2(total - valorDiarias);
-  return { mesesCheios, diasIncompletos, valorDiaria, valorDiarias, valorMesesCheios };
+  const valorMesesCheios = arredondar2(valorMensal * mesesCheios);
+  const valorTotal = arredondar2(valorMesesCheios + valorDiarias);
+  return { mesesCheios, diasIncompletos, valorDiaria, valorDiarias, valorMesesCheios, valorTotal };
 }
