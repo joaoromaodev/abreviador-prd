@@ -7,6 +7,7 @@ import { useSessao } from "./SessaoProvider";
 const ABAS_BASE = [
   { href: "/", label: "Abreviador" },
   { href: "/modelos", label: "Modelos de PRD" },
+  { href: "/calculadora", label: "Calculadora de Locação" },
 ] as const;
 
 const ABAS_ADMIN = [{ href: "/cadastros", label: "Cadastros" }] as const;
