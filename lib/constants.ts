@@ -19,9 +19,9 @@ export const LIMITE_CARACTERES_MAX = 100000;
 // Opções fixas do cadastro de modalidades (Terceirizada). Ficam aqui para serem fáceis de ajustar.
 export const MODALIDADES_TERCEIRIZADA = ["Administrativo", "Ensino Médio", "Ensino Fundamental"] as const;
 
-// Tipos de licitação e o único que NÃO leva número (Dispensa).
+// Tipos de licitação e o único que NÃO leva número (Inexigibilidade).
 export const TIPOS_LICITACAO = ["Pregão Eletrônico", "Dispensa de Licitação", "Inexigibilidade"] as const;
-export const LICITACAO_SEM_NUMERO = "Dispensa de Licitação";
+export const LICITACAO_SEM_NUMERO = "Inexigibilidade";
 
 // Tipo de PRD semeado automaticamente quando a aba "Tipos" da planilha está vazia,
 // para o time já começar com o modelo de Locação de Imóveis pronto (e editável na tela).
