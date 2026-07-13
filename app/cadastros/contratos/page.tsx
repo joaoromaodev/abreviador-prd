@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import {
+  LICITACAO_SEM_NUMERO,
+  MODALIDADES_TERCEIRIZADA,
+  TIPOS_LICITACAO,
+} from "@/lib/constants";
 import { extrairCampos, rotuloCampo, TOKEN_TEXTO_CONTRATO, TOKEN_TEXTO_TA } from "@/lib/template";
 import { hojeISO } from "@/lib/vigencia";
 import type { Contrato, ModalidadeContrato } from "@/lib/types";
@@ -9,9 +14,52 @@ import { useTipos } from "@/hooks/useTipos";
 import { AreaTexto, Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
 import { EtiquetaVigencia } from "@/components/EtiquetaVigencia";
 
+/** Nome do campo `[[...]]` tratado como licitação (tipo + número) no formulário. */
+const CAMPO_LICITACAO = "licitacao";
+
 /** Campos de texto longo ganham um textarea no formulário; o resto, um input de uma linha. */
 function ehCampoLongo(nome: string): boolean {
   return /^(texto|obj|desc)/i.test(nome);
+}
+
+/** Separa "Pregão Eletrônico nº 07/2023" em { tipo, numero }. Sem " nº ", tudo é o tipo (ex.: Dispensa). */
+function analisarLicitacao(valor: string): { tipo: string; numero: string } {
+  const [tipo = "", numero = ""] = valor.split(" nº ");
+  return { tipo: tipo.trim(), numero: numero.trim() };
+}
+
+/** Monta a string final da licitação. Dispensa não leva número; os demais levam quando informado. */
+function comporLicitacao(tipo: string, numero: string): string {
+  if (!tipo) return "";
+  if (tipo === LICITACAO_SEM_NUMERO) return tipo;
+  return numero.trim() ? `${tipo} nº ${numero.trim()}` : tipo;
+}
+
+/** Seleção do tipo de licitação + caixa de número (que some no tipo sem número). */
+function CampoLicitacao({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  const { tipo, numero } = analisarLicitacao(value);
+  const temNumero = tipo !== "" && tipo !== LICITACAO_SEM_NUMERO;
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      <Selecao id={id} value={tipo} onChange={(e) => onChange(comporLicitacao(e.target.value, numero))}>
+        <option value="">Selecione o tipo</option>
+        {TIPOS_LICITACAO.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </Selecao>
+      {temNumero && (
+        <CampoTexto
+          id={`${id}-numero`}
+          value={numero}
+          onChange={(e) => onChange(comporLicitacao(tipo, e.target.value))}
+          placeholder="nº da licitação (ex.: 07/2023)"
+          aria-label="Número da licitação"
+        />
+      )}
+    </div>
+  );
 }
 
 const ESTADO_INICIAL = {
@@ -38,10 +86,18 @@ export default function PaginaContratos() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [busca, setBusca] = useState("");
 
   const hoje = useMemo(() => hojeISO(), []);
   const tiposPorId = useMemo(() => new Map(tipos.map((t) => [t.id, t])), [tipos]);
   const tipoSelecionado = tiposPorId.get(tipoId) ?? null;
+
+  // Busca por nome/número do contrato (o campo "nome" já junta os dois, ex.: "Sede - 123/2020").
+  const contratosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return contratos;
+    return contratos.filter((c) => c.nome.toLowerCase().includes(termo));
+  }, [contratos, busca]);
 
   // Campos do contrato derivados do template do tipo escolhido. "Texto do contrato" e "Texto do
   // termo aditivo" saem da lista normal: são mutuamente exclusivos e controlados pelo checkbox.
@@ -364,13 +420,19 @@ export default function PaginaContratos() {
                         <div key={indice} className="rounded-md border border-gray-200 bg-white px-4 py-3">
                           <div className="flex flex-wrap items-end justify-between gap-2">
                             <div className="min-w-[14rem] flex-1">
-                              <Rotulo htmlFor={`modalidade-nome-${indice}`}>Nome da modalidade</Rotulo>
-                              <CampoTexto
+                              <Rotulo htmlFor={`modalidade-nome-${indice}`}>Modalidade</Rotulo>
+                              <Selecao
                                 id={`modalidade-nome-${indice}`}
                                 value={modalidade.nome}
                                 onChange={(e) => setModalidadeNome(indice, e.target.value)}
-                                placeholder="ex.: Ensino Fundamental"
-                              />
+                              >
+                                <option value="">Selecione a modalidade</option>
+                                {MODALIDADES_TERCEIRIZADA.map((m) => (
+                                  <option key={m} value={m}>
+                                    {m}
+                                  </option>
+                                ))}
+                              </Selecao>
                             </div>
                             <Botao type="button" variante="perigo" onClick={() => removerModalidade(indice)}>
                               Remover
@@ -378,25 +440,37 @@ export default function PaginaContratos() {
                           </div>
                           {camposModalidade.length > 0 && (
                             <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                              {camposModalidade.map((campo) => (
-                                <div key={campo} className={ehCampoLongo(campo) ? "sm:col-span-2" : ""}>
-                                  <Rotulo htmlFor={`modalidade-${indice}-${campo}`}>{rotuloCampo(campo)}</Rotulo>
-                                  {ehCampoLongo(campo) ? (
-                                    <AreaTexto
-                                      id={`modalidade-${indice}-${campo}`}
-                                      rows={2}
-                                      value={modalidade.valores[campo] ?? ""}
-                                      onChange={(e) => setModalidadeValor(indice, campo, e.target.value)}
-                                    />
-                                  ) : (
-                                    <CampoTexto
-                                      id={`modalidade-${indice}-${campo}`}
-                                      value={modalidade.valores[campo] ?? ""}
-                                      onChange={(e) => setModalidadeValor(indice, campo, e.target.value)}
-                                    />
-                                  )}
-                                </div>
-                              ))}
+                              {camposModalidade.map((campo) => {
+                                const ehLicitacao = campo === CAMPO_LICITACAO;
+                                return (
+                                  <div
+                                    key={campo}
+                                    className={ehLicitacao || ehCampoLongo(campo) ? "sm:col-span-2" : ""}
+                                  >
+                                    <Rotulo htmlFor={`modalidade-${indice}-${campo}`}>{rotuloCampo(campo)}</Rotulo>
+                                    {ehLicitacao ? (
+                                      <CampoLicitacao
+                                        id={`modalidade-${indice}-${campo}`}
+                                        value={modalidade.valores[campo] ?? ""}
+                                        onChange={(v) => setModalidadeValor(indice, campo, v)}
+                                      />
+                                    ) : ehCampoLongo(campo) ? (
+                                      <AreaTexto
+                                        id={`modalidade-${indice}-${campo}`}
+                                        rows={2}
+                                        value={modalidade.valores[campo] ?? ""}
+                                        onChange={(e) => setModalidadeValor(indice, campo, e.target.value)}
+                                      />
+                                    ) : (
+                                      <CampoTexto
+                                        id={`modalidade-${indice}-${campo}`}
+                                        value={modalidade.valores[campo] ?? ""}
+                                        onChange={(e) => setModalidadeValor(indice, campo, e.target.value)}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -427,12 +501,24 @@ export default function PaginaContratos() {
       </Card>
 
       <div className="flex flex-col gap-4">
+        {!carregando && contratos.length > 0 && (
+          <CampoTexto
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Pesquisar contrato por nome ou número..."
+            aria-label="Pesquisar contratos"
+          />
+        )}
         {carregando ? (
           <p className="py-6 text-center text-sm text-gray-400">Carregando...</p>
         ) : contratos.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">Nenhum contrato cadastrado ainda.</p>
+        ) : contratosFiltrados.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhum contrato encontrado para “{busca}”.
+          </p>
         ) : (
-          contratos.map((contrato) => (
+          contratosFiltrados.map((contrato) => (
             <Card key={contrato.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">

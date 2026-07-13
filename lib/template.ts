@@ -135,6 +135,7 @@ const ROTULOS: Record<string, string> = {
   modalidade: "Modalidade",
   tipolicitacao: "Tipo de Licitação",
   numlicitacao: "Nº da Licitação",
+  licitacao: "Licitação",
   textocontrato: "Texto do Contrato",
   textotermoadtivo: "Texto do Termo Aditivo",
   objdocontrato: "Objeto do Contrato",
