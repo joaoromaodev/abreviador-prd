@@ -318,25 +318,34 @@ export default function PaginaContratos() {
           {tipoSelecionado && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
-                {camposNormais.map((campo) => (
-                  <div key={campo} className={ehCampoLongo(campo) ? "sm:col-span-2" : ""}>
-                    <Rotulo htmlFor={`campo-${campo}`}>{rotuloCampo(campo)}</Rotulo>
-                    {ehCampoLongo(campo) ? (
-                      <AreaTexto
-                        id={`campo-${campo}`}
-                        rows={2}
-                        value={valores[campo] ?? ""}
-                        onChange={(e) => setValor(campo, e.target.value)}
-                      />
-                    ) : (
-                      <CampoTexto
-                        id={`campo-${campo}`}
-                        value={valores[campo] ?? ""}
-                        onChange={(e) => setValor(campo, e.target.value)}
-                      />
-                    )}
-                  </div>
-                ))}
+                {camposNormais.map((campo) => {
+                  const ehLicitacao = campo === CAMPO_LICITACAO;
+                  return (
+                    <div key={campo} className={ehLicitacao || ehCampoLongo(campo) ? "sm:col-span-2" : ""}>
+                      <Rotulo htmlFor={`campo-${campo}`}>{rotuloCampo(campo)}</Rotulo>
+                      {ehLicitacao ? (
+                        <CampoLicitacao
+                          id={`campo-${campo}`}
+                          value={valores[campo] ?? ""}
+                          onChange={(v) => setValor(campo, v)}
+                        />
+                      ) : ehCampoLongo(campo) ? (
+                        <AreaTexto
+                          id={`campo-${campo}`}
+                          rows={2}
+                          value={valores[campo] ?? ""}
+                          onChange={(e) => setValor(campo, e.target.value)}
+                        />
+                      ) : (
+                        <CampoTexto
+                          id={`campo-${campo}`}
+                          value={valores[campo] ?? ""}
+                          onChange={(e) => setValor(campo, e.target.value)}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
