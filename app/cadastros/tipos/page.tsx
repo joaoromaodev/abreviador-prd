@@ -87,6 +87,13 @@ export default function PaginaTipos() {
             <strong>contrato</strong>: cadastrado uma vez na aba Contratos.
           </li>
           <li>
+            <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"[[campo]]"}</code> — campo por{" "}
+            <strong>modalidade</strong>: muda dentro do mesmo contrato (ex.: Administrativo / Ensino Médio / Ensino
+            Fundamental). O reservado{" "}
+            <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"[[modalidade]]"}</code> vira o nome da
+            modalidade escolhida.
+          </li>
+          <li>
             Reservados: <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">&lt;&lt;termo&gt;&gt;</code>{" "}
             vira <em>(Nº T.A)</em> quando há termo aditivo;{" "}
             <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"{textotermoadtivo}"}</code> só aparece
@@ -141,6 +148,15 @@ export default function PaginaTipos() {
                   ? camposDetectados.contrato.map(rotuloCampo).join(", ")
                   : "nenhum"}
               </p>
+              {camposDetectados.usaModalidade && (
+                <p className="mt-1">
+                  <span className="font-medium text-gray-700">Campos por modalidade:</span>{" "}
+                  {camposDetectados.modalidades.length > 0
+                    ? camposDetectados.modalidades.map(rotuloCampo).join(", ")
+                    : "nenhum"}
+                  {" + nome da modalidade"}
+                </p>
+              )}
             </div>
           )}
 

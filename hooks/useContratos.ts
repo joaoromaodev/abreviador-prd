@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Contrato } from "@/lib/types";
+import type { Contrato, ModalidadeContrato } from "@/lib/types";
 
 export interface DadosFormContrato {
   tipoId: string;
@@ -11,6 +11,7 @@ export interface DadosFormContrato {
   vigenciaInicio: string;
   vigenciaFim: string;
   valores: Record<string, string>;
+  modalidades: ModalidadeContrato[];
 }
 
 async function extrairErro(resposta: Response, mensagemPadrao: string): Promise<string> {

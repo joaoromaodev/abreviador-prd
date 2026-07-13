@@ -22,12 +22,31 @@ const VALORES_CONTRATO = {
   objdocontrato: "LOCACAO DE IMOVEL PARA A SEDE",
 };
 
+// Template no estilo Terceirizada: campos por modalidade `[[...]]` + reservado `[[modalidade]]`.
+const TEMPLATE_MODALIDADE =
+  "PLANO INTERNO: [[pi]]; ACAO: [[acao]]; FONTE: <<fonte>>; CONTRATO Nº {contrato} <<termo>>; " +
+  "modalidade: [[modalidade]]; objeto: {textocontrato} / {textotermoadtivo}";
+
 describe("extrairCampos", () => {
   it("separa campos mensais e de contrato, sem repetições e ignorando o token reservado termo", () => {
     const campos = extrairCampos(TEMPLATE);
     expect(campos.mensais).toEqual(["pi", "açao", "programatica", "projatv", "produto", "fonte", "periodo"]);
     expect(campos.contrato).toEqual(["natdesp", "contrato", "modalidade", "textotermoadtivo", "objdocontrato"]);
     expect(campos.usaTermo).toBe(true);
+  });
+
+  it("template sem [[...]] não usa modalidades", () => {
+    const campos = extrairCampos(TEMPLATE);
+    expect(campos.modalidades).toEqual([]);
+    expect(campos.usaModalidade).toBe(false);
+  });
+
+  it("detecta campos por modalidade e ignora o token reservado modalidade na lista", () => {
+    const campos = extrairCampos(TEMPLATE_MODALIDADE);
+    expect(campos.modalidades).toEqual(["pi", "acao"]);
+    expect(campos.usaModalidade).toBe(true);
+    expect(campos.mensais).toEqual(["fonte"]);
+    expect(campos.contrato).toEqual(["contrato", "textocontrato", "textotermoadtivo"]);
   });
 });
 
@@ -58,6 +77,47 @@ describe("renderizar", () => {
     expect(texto).toContain("PAGAMENTO REFERENTE AO CONTRATO Nº 123/2020 (8º T.A);");
     expect(texto).toContain("8 TERMO ADITIVO; OBJETO DO CONTRATO:");
     expect(texto).not.toContain(";;");
+  });
+
+  it("modalidade: usa os valores da modalidade escolhida e imprime o nome dela em [[modalidade]]", () => {
+    const texto = renderizar(TEMPLATE_MODALIDADE, {
+      valoresMensais: { fonte: "0150-TESOURO" },
+      valoresContrato: { contrato: "014/2025", textocontrato: "PRESTACAO DE SERVICOS DE MERENDA" },
+      valoresModalidade: { pi: "1010008904C", acao: "283.554" },
+      nomeModalidade: "Ensino Fundamental",
+      temTermoAditivo: false,
+      quantidadeTermosAditivos: 0,
+    });
+
+    expect(texto).toContain("PLANO INTERNO: 1010008904C;");
+    expect(texto).toContain("ACAO: 283.554;");
+    expect(texto).toContain("modalidade: Ensino Fundamental;");
+    expect(texto).toContain("FONTE: 0150-TESOURO;");
+    expect(texto).toContain("objeto: PRESTACAO DE SERVICOS DE MERENDA");
+  });
+
+  it("modalidade: trocar a modalidade troca todos os valores [[...]] no mesmo contrato", () => {
+    const base = {
+      valoresMensais: { fonte: "0150-TESOURO" },
+      valoresContrato: { contrato: "014/2025", textocontrato: "MERENDA" },
+      temTermoAditivo: false,
+      quantidadeTermosAditivos: 0,
+    };
+    const fundamental = renderizar(TEMPLATE_MODALIDADE, {
+      ...base,
+      valoresModalidade: { pi: "1010008904C", acao: "283.554" },
+      nomeModalidade: "Ensino Fundamental",
+    });
+    const medio = renderizar(TEMPLATE_MODALIDADE, {
+      ...base,
+      valoresModalidade: { pi: "1010008906C", acao: "283.557" },
+      nomeModalidade: "Ensino Médio",
+    });
+
+    expect(fundamental).toContain("PLANO INTERNO: 1010008904C;");
+    expect(medio).toContain("PLANO INTERNO: 1010008906C;");
+    expect(medio).toContain("modalidade: Ensino Médio;");
+    expect(fundamental).not.toContain("1010008906C");
   });
 
   it("substitui os campos mensais e o período (caso 3: data em texto livre)", () => {

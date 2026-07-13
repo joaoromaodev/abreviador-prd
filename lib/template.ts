@@ -1,8 +1,10 @@
 // Motor de templates dos modelos de PRD.
 //
-// Um template é um texto com dois tipos de marcador:
+// Um template é um texto com três tipos de marcador:
 //   <<campo>>  -> campo MENSAL: preenchido a cada PRD (muda todo mês).
-//   {campo}    -> campo do CONTRATO: cadastrado e amarrado ao contrato.
+//   {campo}    -> campo do CONTRATO: cadastrado uma vez e amarrado ao contrato.
+//   [[campo]]  -> campo por MODALIDADE: muda dentro do mesmo contrato conforme a modalidade
+//                 escolhida (ex.: Terceirizada — Administrativo / Ensino Médio / Ensino Fundamental).
 //
 // Tokens RESERVADOS, com comportamento ligado ao termo aditivo do contrato:
 //   <<termo>>           -> derivado do contrato. Se o contrato tem termo aditivo,
@@ -11,28 +13,37 @@
 //                       -> usa UM ou OUTRO (nunca os dois): sem termo aditivo, fica só o
 //                          texto do contrato; com termo aditivo, fica só o texto do T.A.
 //                          O separador " / " e o lado não usado são removidos.
+//   [[modalidade]]      -> derivado da modalidade escolhida: vira o NOME dela (ex.: "Ensino Médio").
 
 export const TOKEN_TERMO = "termo";
 export const TOKEN_TEXTO_CONTRATO = "textocontrato";
 export const TOKEN_TEXTO_TA = "textotermoadtivo";
+export const TOKEN_MODALIDADE = "modalidade";
 
 const RE_MENSAL = /<<\s*([^<>]+?)\s*>>/g;
 const RE_CONTRATO = /\{\s*([^{}]+?)\s*\}/g;
+const RE_MODALIDADE = /\[\[\s*([^[\]]+?)\s*\]\]/g;
 
 export interface CamposTemplate {
   /** Campos `<<...>>` perguntados a cada PRD (sem o token reservado `termo`). */
   mensais: string[];
   /** Campos `{...}` amarrados ao contrato (inclui `textotermoadtivo`, se houver). */
   contrato: string[];
+  /** Campos `[[...]]` preenchidos por modalidade (sem o token reservado `modalidade`). */
+  modalidades: string[];
   /** O template usa o token reservado `<<termo>>`? */
   usaTermo: boolean;
+  /** O template usa modalidades? (qualquer `[[...]]`, inclusive o reservado `[[modalidade]]`). */
+  usaModalidade: boolean;
 }
 
 /** Lê um template e devolve, sem repetições e na ordem de aparição, os campos que ele usa. */
 export function extrairCampos(template: string): CamposTemplate {
   const mensais: string[] = [];
   const contrato: string[] = [];
+  const modalidades: string[] = [];
   let usaTermo = false;
+  let usaModalidade = false;
 
   for (const correspondencia of template.matchAll(RE_MENSAL)) {
     const nome = correspondencia[1].trim();
@@ -48,12 +59,23 @@ export function extrairCampos(template: string): CamposTemplate {
     if (!contrato.includes(nome)) contrato.push(nome);
   }
 
-  return { mensais, contrato, usaTermo };
+  for (const correspondencia of template.matchAll(RE_MODALIDADE)) {
+    usaModalidade = true;
+    const nome = correspondencia[1].trim();
+    if (nome === TOKEN_MODALIDADE) continue;
+    if (!modalidades.includes(nome)) modalidades.push(nome);
+  }
+
+  return { mensais, contrato, modalidades, usaTermo, usaModalidade };
 }
 
 export interface DadosRender {
   valoresMensais: Record<string, string>;
   valoresContrato: Record<string, string>;
+  /** Valores dos campos `[[...]]` da modalidade escolhida (vazio quando o tipo não usa modalidades). */
+  valoresModalidade?: Record<string, string>;
+  /** Nome da modalidade escolhida — preenche o token reservado `[[modalidade]]`. */
+  nomeModalidade?: string;
   temTermoAditivo: boolean;
   quantidadeTermosAditivos: number;
 }
@@ -86,6 +108,13 @@ export function renderizar(template: string, dados: DadosRender): string {
     texto = texto.replace(/\s*\/\s*\{\s*textotermoadtivo\s*\}/g, "");
   }
 
+  const valoresModalidade = dados.valoresModalidade ?? {};
+  texto = texto.replace(RE_MODALIDADE, (_correspondencia, nome: string) => {
+    const chave = nome.trim();
+    if (chave === TOKEN_MODALIDADE) return dados.nomeModalidade ?? "";
+    return valoresModalidade[chave] ?? "";
+  });
+
   texto = texto.replace(RE_MENSAL, (_correspondencia, nome: string) => dados.valoresMensais[nome.trim()] ?? "");
   texto = texto.replace(RE_CONTRATO, (_correspondencia, nome: string) => valoresContrato[nome.trim()] ?? "");
 
@@ -104,6 +133,8 @@ const ROTULOS: Record<string, string> = {
   natdesp: "Natureza de Despesa",
   contrato: "Nº do Contrato",
   modalidade: "Modalidade",
+  tipolicitacao: "Tipo de Licitação",
+  numlicitacao: "Nº da Licitação",
   textocontrato: "Texto do Contrato",
   textotermoadtivo: "Texto do Termo Aditivo",
   objdocontrato: "Objeto do Contrato",

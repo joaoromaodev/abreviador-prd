@@ -28,6 +28,18 @@ export interface TipoPRD {
   atualizadoEm: string;
 }
 
+/**
+ * Um conjunto de valores específico de uma modalidade dentro do MESMO contrato (ex.: Terceirizada,
+ * onde Administrativo / Ensino Médio / Ensino Fundamental têm plano interno, ação, etc. diferentes).
+ * Preenche os campos `[[...]]` do template do tipo.
+ */
+export interface ModalidadeContrato {
+  /** Nome exibido e impresso no PRD (ex.: "Ensino Fundamental"). Preenche o token reservado `[[modalidade]]`. */
+  nome: string;
+  /** Valores dos campos `[[...]]` do template, específicos desta modalidade. */
+  valores: Record<string, string>;
+}
+
 /** Contrato cadastrado e amarrado a um tipo. `valores` guarda os campos `{}` do template do tipo. */
 export interface Contrato {
   id: string;
@@ -40,6 +52,8 @@ export interface Contrato {
   vigenciaInicio: string;
   vigenciaFim: string;
   valores: Record<string, string>;
+  /** Modalidades do contrato (campos `[[...]]`). Vazio quando o tipo não usa modalidades (ex.: Locação). */
+  modalidades: ModalidadeContrato[];
   criadoEm: string;
   atualizadoEm: string;
 }

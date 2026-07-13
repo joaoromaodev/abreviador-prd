@@ -1,4 +1,5 @@
 import type { DadosContrato } from "@/lib/sheets/contratos";
+import type { ModalidadeContrato } from "@/lib/types";
 
 /** Normaliza o corpo de uma requisição em DadosContrato, ou devolve uma mensagem de erro de validação. */
 export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
@@ -16,13 +17,33 @@ export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
   const vigenciaInicio = dataIso(dados?.vigenciaInicio);
   const vigenciaFim = dataIso(dados?.vigenciaFim);
 
-  const valoresBrutos = (dados?.valores ?? {}) as Record<string, unknown>;
+  const valores = normalizarValores(dados?.valores);
+  const modalidades = lerModalidades(dados?.modalidades);
+
+  return { tipoId, nome, temTermoAditivo, quantidadeTermosAditivos, vigenciaInicio, vigenciaFim, valores, modalidades };
+}
+
+/** Converte um mapa bruto de valores em Record<string, string>. */
+function normalizarValores(bruto: unknown): Record<string, string> {
+  const valoresBrutos = (bruto ?? {}) as Record<string, unknown>;
   const valores: Record<string, string> = {};
   for (const [chave, valor] of Object.entries(valoresBrutos)) {
     valores[chave] = String(valor ?? "");
   }
+  return valores;
+}
 
-  return { tipoId, nome, temTermoAditivo, quantidadeTermosAditivos, vigenciaInicio, vigenciaFim, valores };
+/** Normaliza a lista de modalidades; descarta itens totalmente vazios (sem nome e sem valores). */
+function lerModalidades(bruto: unknown): ModalidadeContrato[] {
+  if (!Array.isArray(bruto)) return [];
+  const modalidades: ModalidadeContrato[] = [];
+  for (const item of bruto) {
+    const registro = item as Record<string, unknown> | null;
+    const nome = String(registro?.nome ?? "").trim();
+    const valores = normalizarValores(registro?.valores);
+    if (nome || Object.keys(valores).length > 0) modalidades.push({ nome, valores });
+  }
+  return modalidades;
 }
 
 /** Aceita só datas no formato ISO "YYYY-MM-DD"; qualquer outra coisa vira "" (vigência não informada). */

@@ -1,8 +1,10 @@
 import { gerarId } from "@/lib/id";
-import type { Contrato } from "@/lib/types";
+import type { Contrato, ModalidadeContrato } from "@/lib/types";
 import { adicionarLinha, atualizarLinha, lerLinhas, removerLinha, type Registro } from "./table";
 
 const ABA = "Contratos";
+// "modalidades" fica por ÚLTIMO de propósito: preserva a posição das colunas já gravadas nas
+// planilhas existentes (linhas antigas simplesmente não têm essa coluna e viram lista vazia).
 const COLUNAS = [
   "id",
   "tipoId",
@@ -14,6 +16,7 @@ const COLUNAS = [
   "valores",
   "criadoEm",
   "atualizadoEm",
+  "modalidades",
 ];
 
 export interface DadosContrato {
@@ -24,6 +27,7 @@ export interface DadosContrato {
   vigenciaInicio: string;
   vigenciaFim: string;
   valores: Record<string, string>;
+  modalidades: ModalidadeContrato[];
 }
 
 function lerValores(bruto: string): Record<string, string> {
@@ -33,6 +37,25 @@ function lerValores(bruto: string): Record<string, string> {
     return objeto && typeof objeto === "object" ? (objeto as Record<string, string>) : {};
   } catch {
     return {};
+  }
+}
+
+function lerModalidades(bruto: string): ModalidadeContrato[] {
+  if (!bruto) return [];
+  try {
+    const lista = JSON.parse(bruto);
+    if (!Array.isArray(lista)) return [];
+    return lista
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      .map((item) => {
+        const valores = item.valores;
+        return {
+          nome: String(item.nome ?? ""),
+          valores: valores && typeof valores === "object" ? (valores as Record<string, string>) : {},
+        };
+      });
+  } catch {
+    return [];
   }
 }
 
@@ -47,6 +70,7 @@ function paraContrato(registro: Registro): Contrato {
     vigenciaInicio: registro.vigenciaInicio,
     vigenciaFim: registro.vigenciaFim,
     valores: lerValores(registro.valores),
+    modalidades: lerModalidades(registro.modalidades),
     criadoEm: registro.criadoEm,
     atualizadoEm: registro.atualizadoEm,
   };
@@ -61,6 +85,7 @@ function paraCampos(dados: DadosContrato): Registro {
     vigenciaInicio: dados.vigenciaInicio,
     vigenciaFim: dados.vigenciaFim,
     valores: JSON.stringify(dados.valores),
+    modalidades: JSON.stringify(dados.modalidades ?? []),
   };
 }
 

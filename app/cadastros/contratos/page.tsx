@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { extrairCampos, rotuloCampo, TOKEN_TEXTO_CONTRATO, TOKEN_TEXTO_TA } from "@/lib/template";
 import { hojeISO } from "@/lib/vigencia";
-import type { Contrato } from "@/lib/types";
+import type { Contrato, ModalidadeContrato } from "@/lib/types";
 import { useContratos } from "@/hooks/useContratos";
 import { useTipos } from "@/hooks/useTipos";
 import { AreaTexto, Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
@@ -34,6 +34,7 @@ export default function PaginaContratos() {
   const [vigenciaInicio, setVigenciaInicio] = useState(ESTADO_INICIAL.vigenciaInicio);
   const [vigenciaFim, setVigenciaFim] = useState(ESTADO_INICIAL.vigenciaFim);
   const [valores, setValores] = useState<Record<string, string>>({});
+  const [modalidades, setModalidades] = useState<ModalidadeContrato[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -44,15 +45,23 @@ export default function PaginaContratos() {
 
   // Campos do contrato derivados do template do tipo escolhido. "Texto do contrato" e "Texto do
   // termo aditivo" saem da lista normal: são mutuamente exclusivos e controlados pelo checkbox.
-  const { camposNormais, usaTextoContrato, usaTextoTA } = useMemo(() => {
+  const { camposNormais, usaTextoContrato, usaTextoTA, camposModalidade, usaModalidades } = useMemo(() => {
     if (!tipoSelecionado) {
-      return { camposNormais: [] as string[], usaTextoContrato: false, usaTextoTA: false };
+      return {
+        camposNormais: [] as string[],
+        usaTextoContrato: false,
+        usaTextoTA: false,
+        camposModalidade: [] as string[],
+        usaModalidades: false,
+      };
     }
-    const { contrato } = extrairCampos(tipoSelecionado.template);
+    const { contrato, modalidades: camposMod, usaModalidade } = extrairCampos(tipoSelecionado.template);
     return {
       camposNormais: contrato.filter((c) => c !== TOKEN_TEXTO_CONTRATO && c !== TOKEN_TEXTO_TA),
       usaTextoContrato: contrato.includes(TOKEN_TEXTO_CONTRATO),
       usaTextoTA: contrato.includes(TOKEN_TEXTO_TA),
+      camposModalidade: camposMod,
+      usaModalidades: usaModalidade,
     };
   }, [tipoSelecionado]);
 
@@ -64,12 +73,31 @@ export default function PaginaContratos() {
     setVigenciaInicio(ESTADO_INICIAL.vigenciaInicio);
     setVigenciaFim(ESTADO_INICIAL.vigenciaFim);
     setValores({});
+    setModalidades([]);
     setEditandoId(null);
     setErro(null);
   }
 
   function setValor(campo: string, valor: string) {
     setValores((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  function adicionarModalidade() {
+    setModalidades((atual) => [...atual, { nome: "", valores: {} }]);
+  }
+
+  function removerModalidade(indice: number) {
+    setModalidades((atual) => atual.filter((_, i) => i !== indice));
+  }
+
+  function setModalidadeNome(indice: number, nome: string) {
+    setModalidades((atual) => atual.map((m, i) => (i === indice ? { ...m, nome } : m)));
+  }
+
+  function setModalidadeValor(indice: number, campo: string, valor: string) {
+    setModalidades((atual) =>
+      atual.map((m, i) => (i === indice ? { ...m, valores: { ...m.valores, [campo]: valor } } : m))
+    );
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -82,6 +110,14 @@ export default function PaginaContratos() {
       setErro("Informe uma identificação para o contrato.");
       return;
     }
+    if (usaModalidades && modalidades.length === 0) {
+      setErro("Este tipo exige ao menos uma modalidade. Adicione uma abaixo.");
+      return;
+    }
+    if (usaModalidades && modalidades.some((m) => !m.nome.trim())) {
+      setErro("Dê um nome a cada modalidade (ex.: Ensino Fundamental).");
+      return;
+    }
 
     // Monta os valores apenas com os campos do tipo escolhido (mantém a planilha limpa).
     // Texto do contrato OU do termo aditivo, conforme o checkbox — nunca os dois.
@@ -92,6 +128,15 @@ export default function PaginaContratos() {
     } else if (usaTextoContrato) {
       valoresFinais[TOKEN_TEXTO_CONTRATO] = (valores[TOKEN_TEXTO_CONTRATO] ?? "").trim();
     }
+
+    // Modalidades: guarda só os campos [[...]] do tipo, em cada modalidade cadastrada.
+    const modalidadesFinais: ModalidadeContrato[] = usaModalidades
+      ? modalidades.map((m) => {
+          const valoresMod: Record<string, string> = {};
+          for (const campo of camposModalidade) valoresMod[campo] = (m.valores[campo] ?? "").trim();
+          return { nome: m.nome.trim(), valores: valoresMod };
+        })
+      : [];
 
     const quantidadeNum = temTermoAditivo ? Math.max(1, Number(quantidade) || 1) : 0;
 
@@ -106,6 +151,7 @@ export default function PaginaContratos() {
         vigenciaInicio,
         vigenciaFim,
         valores: valoresFinais,
+        modalidades: modalidadesFinais,
       };
       if (editandoId) {
         await editar(editandoId, dados);
@@ -129,6 +175,7 @@ export default function PaginaContratos() {
     setVigenciaInicio(contrato.vigenciaInicio ?? "");
     setVigenciaFim(contrato.vigenciaFim ?? "");
     setValores(contrato.valores);
+    setModalidades(contrato.modalidades ?? []);
     setErro(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -292,6 +339,72 @@ export default function PaginaContratos() {
                   </div>
                 )}
               </div>
+
+              {usaModalidades && (
+                <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700">Modalidades</h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Este tipo tem campos que mudam por modalidade dentro do mesmo contrato. Cadastre cada
+                        modalidade (ex.: Administrativo, Ensino Médio, Ensino Fundamental) com os seus valores. Na
+                        hora de gerar o PRD, o usuário escolhe a modalidade.
+                      </p>
+                    </div>
+                    <Botao type="button" variante="secundario" onClick={adicionarModalidade}>
+                      Adicionar modalidade
+                    </Botao>
+                  </div>
+
+                  {modalidades.length === 0 ? (
+                    <p className="mt-4 text-sm text-gray-500">Nenhuma modalidade ainda. Adicione ao menos uma.</p>
+                  ) : (
+                    <div className="mt-4 flex flex-col gap-4">
+                      {modalidades.map((modalidade, indice) => (
+                        <div key={indice} className="rounded-md border border-gray-200 bg-white px-4 py-3">
+                          <div className="flex flex-wrap items-end justify-between gap-2">
+                            <div className="min-w-[14rem] flex-1">
+                              <Rotulo htmlFor={`modalidade-nome-${indice}`}>Nome da modalidade</Rotulo>
+                              <CampoTexto
+                                id={`modalidade-nome-${indice}`}
+                                value={modalidade.nome}
+                                onChange={(e) => setModalidadeNome(indice, e.target.value)}
+                                placeholder="ex.: Ensino Fundamental"
+                              />
+                            </div>
+                            <Botao type="button" variante="perigo" onClick={() => removerModalidade(indice)}>
+                              Remover
+                            </Botao>
+                          </div>
+                          {camposModalidade.length > 0 && (
+                            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                              {camposModalidade.map((campo) => (
+                                <div key={campo} className={ehCampoLongo(campo) ? "sm:col-span-2" : ""}>
+                                  <Rotulo htmlFor={`modalidade-${indice}-${campo}`}>{rotuloCampo(campo)}</Rotulo>
+                                  {ehCampoLongo(campo) ? (
+                                    <AreaTexto
+                                      id={`modalidade-${indice}-${campo}`}
+                                      rows={2}
+                                      value={modalidade.valores[campo] ?? ""}
+                                      onChange={(e) => setModalidadeValor(indice, campo, e.target.value)}
+                                    />
+                                  ) : (
+                                    <CampoTexto
+                                      id={`modalidade-${indice}-${campo}`}
+                                      value={modalidade.valores[campo] ?? ""}
+                                      onChange={(e) => setModalidadeValor(indice, campo, e.target.value)}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 
@@ -332,6 +445,11 @@ export default function PaginaContratos() {
                     {contrato.temTermoAditivo
                       ? ` · ${contrato.quantidadeTermosAditivos}º termo aditivo`
                       : " · sem termo aditivo"}
+                    {contrato.modalidades.length > 0 &&
+                      ` · ${contrato.modalidades.length} modalidade(s): ${contrato.modalidades
+                        .map((m) => m.nome)
+                        .filter(Boolean)
+                        .join(", ")}`}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">

@@ -18,6 +18,7 @@ export default function PaginaGerar() {
   const [tipoId, setTipoId] = useState("");
   const [contratoId, setContratoId] = useState("");
   const [valoresMensais, setValoresMensais] = useState<Record<string, string>>({});
+  const [modalidadeIndice, setModalidadeIndice] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [gerarMesmoAssim, setGerarMesmoAssim] = useState(false);
 
@@ -32,10 +33,17 @@ export default function PaginaGerar() {
     [contratosDoTipo, contratoId]
   );
 
-  const camposMensais = useMemo(
-    () => (tipoSelecionado ? extrairCampos(tipoSelecionado.template).mensais : []),
-    [tipoSelecionado]
-  );
+  const { camposMensais, usaModalidades } = useMemo(() => {
+    if (!tipoSelecionado) return { camposMensais: [] as string[], usaModalidades: false };
+    const campos = extrairCampos(tipoSelecionado.template);
+    return { camposMensais: campos.mensais, usaModalidades: campos.usaModalidade };
+  }, [tipoSelecionado]);
+
+  const modalidadesDoContrato = contratoSelecionado?.modalidades ?? [];
+  const modalidadeSelecionada =
+    usaModalidades && modalidadeIndice !== "" ? modalidadesDoContrato[Number(modalidadeIndice)] ?? null : null;
+  // Quando o tipo usa modalidades, exige escolher uma antes de montar o texto.
+  const faltaModalidade = usaModalidades && !modalidadeSelecionada;
 
   const vigencia = useMemo(
     () => (contratoSelecionado ? analisarVigencia(contratoSelecionado.vigenciaFim, hoje) : null),
@@ -46,24 +54,29 @@ export default function PaginaGerar() {
 
   const resultado = useMemo(() => {
     if (!tipoSelecionado || !contratoSelecionado) return null;
+    if (faltaModalidade) return null;
     return renderizar(tipoSelecionado.template, {
       valoresMensais,
       valoresContrato: contratoSelecionado.valores,
+      valoresModalidade: modalidadeSelecionada?.valores,
+      nomeModalidade: modalidadeSelecionada?.nome,
       temTermoAditivo: contratoSelecionado.temTermoAditivo,
       quantidadeTermosAditivos: contratoSelecionado.quantidadeTermosAditivos,
     });
-  }, [tipoSelecionado, contratoSelecionado, valoresMensais]);
+  }, [tipoSelecionado, contratoSelecionado, valoresMensais, faltaModalidade, modalidadeSelecionada]);
 
   function handleTrocarTipo(novoTipoId: string) {
     setTipoId(novoTipoId);
     setContratoId("");
     setValoresMensais({});
+    setModalidadeIndice("");
     setCopiado(false);
     setGerarMesmoAssim(false);
   }
 
   function handleTrocarContrato(novoContratoId: string) {
     setContratoId(novoContratoId);
+    setModalidadeIndice("");
     setCopiado(false);
     setGerarMesmoAssim(false);
   }
@@ -199,6 +212,34 @@ export default function PaginaGerar() {
               <p className="mt-4 text-sm text-gray-500">Vigência não informada para este contrato.</p>
             )}
           </>
+        )}
+
+        {contratoSelecionado && usaModalidades && (
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <Rotulo htmlFor="gerar-modalidade">Modalidade</Rotulo>
+            {modalidadesDoContrato.length === 0 ? (
+              <p className="mt-1 text-sm text-amber-700">
+                Este contrato não tem modalidades cadastradas. Cadastre-as em{" "}
+                <strong>Cadastros → Contratos</strong> antes de gerar.
+              </p>
+            ) : (
+              <Selecao
+                id="gerar-modalidade"
+                value={modalidadeIndice}
+                onChange={(e) => {
+                  setModalidadeIndice(e.target.value);
+                  setCopiado(false);
+                }}
+              >
+                <option value="">Selecione a modalidade</option>
+                {modalidadesDoContrato.map((modalidade, indice) => (
+                  <option key={indice} value={String(indice)}>
+                    {modalidade.nome || `Modalidade ${indice + 1}`}
+                  </option>
+                ))}
+              </Selecao>
+            )}
+          </div>
         )}
 
         {contratoSelecionado && camposMensais.length > 0 && (
