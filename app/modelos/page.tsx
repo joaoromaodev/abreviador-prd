@@ -177,7 +177,10 @@ export default function PaginaGerar() {
           </p>
         )}
 
-        {contratoSelecionado && vigencia && (
+        {contratoSelecionado &&
+          (contratoSelecionado.vigenciaIndeterminada ? (
+            <p className="mt-4 text-sm text-blue-700">Contrato com prazo indeterminado (sem data de fim).</p>
+          ) : vigencia ? (
           <>
             {vigencia.status === "expirado" && (
               <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -212,7 +215,7 @@ export default function PaginaGerar() {
               <p className="mt-4 text-sm text-gray-500">Vigência não informada para este contrato.</p>
             )}
           </>
-        )}
+          ) : null)}
 
         {contratoSelecionado && usaModalidades && (
           <div className="mt-6 border-t border-gray-200 pt-4">

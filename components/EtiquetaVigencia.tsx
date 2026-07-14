@@ -22,7 +22,22 @@ function texto(vigenciaFim: string, hoje: string): string {
 }
 
 /** Etiqueta colorida com a situação da vigência de um contrato. */
-export function EtiquetaVigencia({ vigenciaFim, hoje }: { vigenciaFim: string; hoje: string }) {
+export function EtiquetaVigencia({
+  vigenciaFim,
+  hoje,
+  indeterminada = false,
+}: {
+  vigenciaFim: string;
+  hoje: string;
+  indeterminada?: boolean;
+}) {
+  if (indeterminada) {
+    return (
+      <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+        Prazo indeterminado
+      </span>
+    );
+  }
   const { status } = analisarVigencia(vigenciaFim, hoje);
   return (
     <span

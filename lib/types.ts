@@ -51,6 +51,8 @@ export interface Contrato {
   /** Vigência do contrato em ISO "YYYY-MM-DD" (vazio se não informada). */
   vigenciaInicio: string;
   vigenciaFim: string;
+  /** Contrato de prazo indeterminado: sem data de fim, nunca marcado como vencido (raro). */
+  vigenciaIndeterminada: boolean;
   valores: Record<string, string>;
   /** Modalidades do contrato (campos `[[...]]`). Vazio quando o tipo não usa modalidades (ex.: Locação). */
   modalidades: ModalidadeContrato[];

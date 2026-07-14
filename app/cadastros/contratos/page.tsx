@@ -69,6 +69,7 @@ const ESTADO_INICIAL = {
   quantidade: "1",
   vigenciaInicio: "",
   vigenciaFim: "",
+  vigenciaIndeterminada: false,
 };
 
 export default function PaginaContratos() {
@@ -81,6 +82,7 @@ export default function PaginaContratos() {
   const [quantidade, setQuantidade] = useState(ESTADO_INICIAL.quantidade);
   const [vigenciaInicio, setVigenciaInicio] = useState(ESTADO_INICIAL.vigenciaInicio);
   const [vigenciaFim, setVigenciaFim] = useState(ESTADO_INICIAL.vigenciaFim);
+  const [vigenciaIndeterminada, setVigenciaIndeterminada] = useState(ESTADO_INICIAL.vigenciaIndeterminada);
   const [valores, setValores] = useState<Record<string, string>>({});
   const [modalidades, setModalidades] = useState<ModalidadeContrato[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export default function PaginaContratos() {
     setQuantidade(ESTADO_INICIAL.quantidade);
     setVigenciaInicio(ESTADO_INICIAL.vigenciaInicio);
     setVigenciaFim(ESTADO_INICIAL.vigenciaFim);
+    setVigenciaIndeterminada(ESTADO_INICIAL.vigenciaIndeterminada);
     setValores({});
     setModalidades([]);
     setEditandoId(null);
@@ -205,7 +208,8 @@ export default function PaginaContratos() {
         temTermoAditivo,
         quantidadeTermosAditivos: quantidadeNum,
         vigenciaInicio,
-        vigenciaFim,
+        vigenciaFim: vigenciaIndeterminada ? "" : vigenciaFim,
+        vigenciaIndeterminada,
         valores: valoresFinais,
         modalidades: modalidadesFinais,
       };
@@ -230,6 +234,7 @@ export default function PaginaContratos() {
     setQuantidade(String(contrato.quantidadeTermosAditivos || 1));
     setVigenciaInicio(contrato.vigenciaInicio ?? "");
     setVigenciaFim(contrato.vigenciaFim ?? "");
+    setVigenciaIndeterminada(contrato.vigenciaIndeterminada ?? false);
     setValores(contrato.valores);
     setModalidades(contrato.modalidades ?? []);
     setErro(null);
@@ -308,9 +313,21 @@ export default function PaginaContratos() {
                 type="date"
                 value={vigenciaFim}
                 onChange={(e) => setVigenciaFim(e.target.value)}
+                disabled={vigenciaIndeterminada}
               />
+              <label className="mt-2 flex items-center gap-2 text-xs font-medium text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={vigenciaIndeterminada}
+                  onChange={(e) => setVigenciaIndeterminada(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Prazo indeterminado (sem data de fim)
+              </label>
               <p className="mt-1 text-xs text-gray-500">
-                Usada para avisar quando o contrato está vencendo ou expirado.
+                {vigenciaIndeterminada
+                  ? "Contrato sem data de fim: nunca será marcado como vencido."
+                  : "Usada para avisar quando o contrato está vencendo ou expirado."}
               </p>
             </div>
           </div>
@@ -533,7 +550,11 @@ export default function PaginaContratos() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-medium text-gray-900">{contrato.nome}</h2>
-                    <EtiquetaVigencia vigenciaFim={contrato.vigenciaFim} hoje={hoje} />
+                    <EtiquetaVigencia
+                      vigenciaFim={contrato.vigenciaFim}
+                      hoje={hoje}
+                      indeterminada={contrato.vigenciaIndeterminada}
+                    />
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
                     {tiposPorId.get(contrato.tipoId)?.nome ?? "Tipo removido"}

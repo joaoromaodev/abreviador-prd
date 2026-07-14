@@ -14,13 +14,25 @@ export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
   const quantidadeTermosAditivos =
     temTermoAditivo && Number.isFinite(quantidadeBruta) && quantidadeBruta > 0 ? Math.floor(quantidadeBruta) : 0;
 
+  const vigenciaIndeterminada = dados?.vigenciaIndeterminada === true;
   const vigenciaInicio = dataIso(dados?.vigenciaInicio);
-  const vigenciaFim = dataIso(dados?.vigenciaFim);
+  // Prazo indeterminado não tem data de fim.
+  const vigenciaFim = vigenciaIndeterminada ? "" : dataIso(dados?.vigenciaFim);
 
   const valores = normalizarValores(dados?.valores);
   const modalidades = lerModalidades(dados?.modalidades);
 
-  return { tipoId, nome, temTermoAditivo, quantidadeTermosAditivos, vigenciaInicio, vigenciaFim, valores, modalidades };
+  return {
+    tipoId,
+    nome,
+    temTermoAditivo,
+    quantidadeTermosAditivos,
+    vigenciaInicio,
+    vigenciaFim,
+    vigenciaIndeterminada,
+    valores,
+    modalidades,
+  };
 }
 
 /** Converte um mapa bruto de valores em Record<string, string>. */

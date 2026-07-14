@@ -10,6 +10,7 @@ export interface DadosFormContrato {
   quantidadeTermosAditivos: number;
   vigenciaInicio: string;
   vigenciaFim: string;
+  vigenciaIndeterminada: boolean;
   valores: Record<string, string>;
   modalidades: ModalidadeContrato[];
 }

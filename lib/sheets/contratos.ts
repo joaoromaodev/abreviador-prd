@@ -17,6 +17,7 @@ const COLUNAS = [
   "criadoEm",
   "atualizadoEm",
   "modalidades",
+  "vigenciaIndeterminada",
 ];
 
 export interface DadosContrato {
@@ -26,6 +27,7 @@ export interface DadosContrato {
   quantidadeTermosAditivos: number;
   vigenciaInicio: string;
   vigenciaFim: string;
+  vigenciaIndeterminada: boolean;
   valores: Record<string, string>;
   modalidades: ModalidadeContrato[];
 }
@@ -69,6 +71,7 @@ function paraContrato(registro: Registro): Contrato {
     quantidadeTermosAditivos: Number.isFinite(quantidade) ? quantidade : 0,
     vigenciaInicio: registro.vigenciaInicio,
     vigenciaFim: registro.vigenciaFim,
+    vigenciaIndeterminada: registro.vigenciaIndeterminada === "true",
     valores: lerValores(registro.valores),
     modalidades: lerModalidades(registro.modalidades),
     criadoEm: registro.criadoEm,
@@ -84,6 +87,7 @@ function paraCampos(dados: DadosContrato): Registro {
     quantidadeTermosAditivos: String(dados.quantidadeTermosAditivos),
     vigenciaInicio: dados.vigenciaInicio,
     vigenciaFim: dados.vigenciaFim,
+    vigenciaIndeterminada: String(dados.vigenciaIndeterminada),
     valores: JSON.stringify(dados.valores),
     modalidades: JSON.stringify(dados.modalidades ?? []),
   };
