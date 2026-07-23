@@ -14,6 +14,11 @@
 //                          texto do contrato; com termo aditivo, fica só o texto do T.A.
 //                          O separador " / " e o lado não usado são removidos.
 //   [[modalidade]]      -> derivado da modalidade escolhida: vira o NOME dela (ex.: "Ensino Médio").
+//                          Na modalidade NÃO impressa (MODALIDADE_NAO_IMPRESSA, hoje "Prestação de
+//                          Serviço"), o token some junto com o rótulo que vem antes dele — o texto
+//                          não sai com "MODALIDADE:" sobrando.
+
+import { MODALIDADE_NAO_IMPRESSA } from "./constants";
 
 export const TOKEN_TERMO = "termo";
 export const TOKEN_TEXTO_CONTRATO = "textocontrato";
@@ -23,6 +28,9 @@ export const TOKEN_MODALIDADE = "modalidade";
 const RE_MENSAL = /<<\s*([^<>]+?)\s*>>/g;
 const RE_CONTRATO = /\{\s*([^{}]+?)\s*\}/g;
 const RE_MODALIDADE = /\[\[\s*([^[\]]+?)\s*\]\]/g;
+// Rótulo colado no token reservado (ex.: "MODALIDADE: [[modalidade]]"): usado para apagar os dois
+// de uma vez na modalidade não impressa, senão sobraria o rótulo sem valor nenhum depois.
+const RE_ROTULO_MODALIDADE = /[^\s;,]+\s*:\s*\[\[\s*modalidade\s*\]\]/g;
 
 export interface CamposTemplate {
   /** Campos `<<...>>` perguntados a cada PRD (sem o token reservado `termo`). */
@@ -109,9 +117,18 @@ export function renderizar(template: string, dados: DadosRender): string {
   }
 
   const valoresModalidade = dados.valoresModalidade ?? {};
+  const imprimeModalidade = dados.nomeModalidade !== MODALIDADE_NAO_IMPRESSA;
+
+  if (!imprimeModalidade) {
+    // Modalidade que não vai pro texto: tira o rótulo + o token juntos. O ";" que sobra vazio
+    // é colapsado no limpar(), igual ao que acontece com o termo aditivo ausente.
+    texto = texto.replace(RE_ROTULO_MODALIDADE, "");
+  }
+
   texto = texto.replace(RE_MODALIDADE, (_correspondencia, nome: string) => {
     const chave = nome.trim();
-    if (chave === TOKEN_MODALIDADE) return dados.nomeModalidade ?? "";
+    // Só o NOME da modalidade some; os demais campos `[[...]]` dela continuam valendo normalmente.
+    if (chave === TOKEN_MODALIDADE) return imprimeModalidade ? dados.nomeModalidade ?? "" : "";
     return valoresModalidade[chave] ?? "";
   });
 

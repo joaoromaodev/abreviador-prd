@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
   LICITACAO_SEM_NUMERO,
+  MODALIDADE_NAO_IMPRESSA,
   MODALIDADES_TERCEIRIZADA,
   TIPOS_LICITACAO,
 } from "@/lib/constants";
@@ -430,7 +431,10 @@ export default function PaginaContratos() {
                       <p className="mt-1 text-xs text-gray-500">
                         Este tipo tem campos que mudam por modalidade dentro do mesmo contrato. Cadastre cada
                         modalidade (ex.: Administrativo, Ensino Médio, Ensino Fundamental) com os seus valores. Na
-                        hora de gerar o PRD, o usuário escolhe a modalidade.
+                        hora de gerar o PRD, o usuário escolhe a modalidade. Use{" "}
+                        <strong>{MODALIDADE_NAO_IMPRESSA}</strong> quando o contrato não for de ensino nem
+                        administrativo: os valores valem do mesmo jeito, mas o texto do PRD sai sem o trecho
+                        &ldquo;MODALIDADE:&rdquo;.
                       </p>
                     </div>
                     <Botao type="button" variante="secundario" onClick={adicionarModalidade}>

@@ -17,7 +17,16 @@ export const LIMITE_CARACTERES_MIN = 50;
 export const LIMITE_CARACTERES_MAX = 100000;
 
 // Opções fixas do cadastro de modalidades (Terceirizada). Ficam aqui para serem fáceis de ajustar.
-export const MODALIDADES_TERCEIRIZADA = ["Administrativo", "Ensino Médio", "Ensino Fundamental"] as const;
+export const MODALIDADES_TERCEIRIZADA = [
+  "Administrativo",
+  "Ensino Médio",
+  "Ensino Fundamental",
+  "Prestação de Serviço",
+] as const;
+
+// Modalidade que NÃO é impressa no PRD: existe só para separar os valores no cadastro do contrato.
+// Quando escolhida, o trecho "MODALIDADE: [[modalidade]]" some inteiro do texto (rótulo incluído).
+export const MODALIDADE_NAO_IMPRESSA = "Prestação de Serviço";
 
 // Tipos de licitação e o único que NÃO leva número (Inexigibilidade).
 export const TIPOS_LICITACAO = ["Pregão Eletrônico", "Dispensa de Licitação", "Inexigibilidade"] as const;

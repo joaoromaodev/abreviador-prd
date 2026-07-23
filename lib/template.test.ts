@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TIPO_LOCACAO_PADRAO } from "./constants";
+import { MODALIDADE_NAO_IMPRESSA, TIPO_LOCACAO_PADRAO } from "./constants";
 import { extrairCampos, renderizar } from "./template";
 
 const TEMPLATE = TIPO_LOCACAO_PADRAO.template;
@@ -118,6 +118,39 @@ describe("renderizar", () => {
     expect(medio).toContain("PLANO INTERNO: 1010008906C;");
     expect(medio).toContain("modalidade: Ensino Médio;");
     expect(fundamental).not.toContain("1010008906C");
+  });
+
+  it("modalidade não impressa: some o rótulo junto com o nome, sem deixar 'modalidade:' órfão", () => {
+    const texto = renderizar(TEMPLATE_MODALIDADE, {
+      valoresMensais: { fonte: "0150-TESOURO" },
+      valoresContrato: { contrato: "014/2025", textocontrato: "PRESTACAO DE SERVICOS" },
+      valoresModalidade: { pi: "1010008904C", acao: "283.554" },
+      nomeModalidade: MODALIDADE_NAO_IMPRESSA,
+      temTermoAditivo: false,
+      quantidadeTermosAditivos: 0,
+    });
+
+    expect(texto).not.toMatch(/modalidade/i);
+    expect(texto).not.toContain(";;");
+    // Os demais campos da modalidade continuam saindo normalmente.
+    expect(texto).toContain("PLANO INTERNO: 1010008904C;");
+    expect(texto).toContain("ACAO: 283.554;");
+    expect(texto).toContain("FONTE: 0150-TESOURO;");
+    expect(texto).toContain("CONTRATO Nº 014/2025;");
+    expect(texto).toContain("objeto: PRESTACAO DE SERVICOS");
+  });
+
+  it("modalidade não impressa: template sem rótulo antes do token só perde o nome", () => {
+    const texto = renderizar("PI: [[pi]]; [[modalidade]]; FONTE: <<fonte>>", {
+      valoresMensais: { fonte: "0150" },
+      valoresContrato: {},
+      valoresModalidade: { pi: "1010008904C" },
+      nomeModalidade: MODALIDADE_NAO_IMPRESSA,
+      temTermoAditivo: false,
+      quantidadeTermosAditivos: 0,
+    });
+
+    expect(texto).toBe("PI: 1010008904C; FONTE: 0150");
   });
 
   it("substitui os campos mensais e o período (caso 3: data em texto livre)", () => {
