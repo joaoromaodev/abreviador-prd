@@ -37,13 +37,13 @@ export const TIPOS_LICITACAO = [
   "Convite",
   "Tomada de Preços",
   "Concorrência",
-  "Não Aplicável (não tem número)",
+  "Não Aplicável",
   "Leilão",
   "Diálogo Competitivo",
 ] as const;
 
 // Modalidades que NÃO levam número (a caixa de número some no formulário).
-export const LICITACOES_SEM_NUMERO = ["Inexigibilidade", "Não Aplicável (não tem número)"] as const;
+export const LICITACOES_SEM_NUMERO = ["Inexigibilidade", "Não Aplicável"] as const;
 
 /** True se a modalidade de licitação não leva número. */
 export function licitacaoSemNumero(tipo: string): boolean {
