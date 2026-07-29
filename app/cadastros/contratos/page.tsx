@@ -169,6 +169,10 @@ export default function PaginaContratos() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!tipoId) {
+      setErro("Selecione a categoria do contrato.");
+      return;
+    }
     if (!nome.trim()) {
       setErro("Informe uma identificação para o contrato.");
       return;
@@ -271,8 +275,8 @@ export default function PaginaContratos() {
         <h1 className="text-xl font-semibold text-gray-900">Contratos</h1>
         <p className="mt-1 text-sm text-gray-500">
           Cadastre os contratos e as informações fixas de cada um. Esses dados preenchem automaticamente os campos{" "}
-          <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"{ }"}</code> do tipo na hora de gerar o
-          PRD.
+          <code className="rounded bg-gray-100 px-1 font-mono text-gray-700">{"{ }"}</code> da categoria na hora de
+          gerar o PRD.
         </p>
       </div>
 
@@ -286,14 +290,14 @@ export default function PaginaContratos() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Rotulo htmlFor="campo-tipo">Tipo de PRD (opcional)</Rotulo>
+              <Rotulo htmlFor="campo-tipo">Categoria</Rotulo>
               <Selecao
                 id="campo-tipo"
                 value={tipoId}
                 onChange={(e) => setTipoId(e.target.value)}
                 disabled={carregandoTipos}
               >
-                <option value="">{carregandoTipos ? "Carregando..." : "Sem tipo — só empenho (CEO)"}</option>
+                <option value="">{carregandoTipos ? "Carregando..." : "Selecione a categoria"}</option>
                 {tipos.map((tipo) => (
                   <option key={tipo.id} value={tipo.id}>
                     {tipo.nome}
@@ -301,7 +305,8 @@ export default function PaginaContratos() {
                 ))}
               </Selecao>
               <p className="mt-1 text-xs text-gray-500">
-                Com tipo: gera PRD (CPED) e aparece no empenho. Sem tipo: contrato só de empenho (CEO), sem PRD.
+                Categoria do contrato (Locação, Terceirizada, Consumo, Obra, Convênio…). Categorias com modelo de PRD
+                geram PRD no CPED; as demais servem só para o empenho.
               </p>
             </div>
             <div>
@@ -558,7 +563,7 @@ export default function PaginaContratos() {
           </div>
 
           <div className="flex gap-2">
-            <Botao type="submit" disabled={salvando}>
+            <Botao type="submit" disabled={salvando || !tipoId}>
               {editandoId ? "Salvar edição" : "Adicionar contrato"}
             </Botao>
             {editandoId && (
@@ -606,9 +611,7 @@ export default function PaginaContratos() {
                     />
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    {contrato.tipoId
-                      ? (tiposPorId.get(contrato.tipoId)?.nome ?? "Tipo removido")
-                      : "Só empenho (sem PRD)"}
+                    {tiposPorId.get(contrato.tipoId)?.nome ?? "Categoria removida"}
                     {contrato.temTermoAditivo
                       ? ` · ${contrato.quantidadeTermosAditivos}º termo aditivo`
                       : " · sem termo aditivo"}

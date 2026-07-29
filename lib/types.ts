@@ -26,10 +26,17 @@ export interface Usuario {
   atualizadoEm: string;
 }
 
-/** Tipo de PRD (ex.: "Locação de Imóveis"). Guarda o texto padrão com os marcadores `<<>>` e `{}`. */
+/**
+ * Categoria de contrato (ex.: "Locação de Imóveis", "Terceirizada", "Consumo", "Obra", "Convênio").
+ * Todo contrato pertence a uma categoria. O `template` (texto padrão com os marcadores `<<>>`, `{}`,
+ * `[[]]`) é OPCIONAL: quando vazio, a categoria não gera PRD (existe só para classificar/empenhar);
+ * quando preenchido, o setor CPED gera PRD para os contratos dessa categoria.
+ * (Mantém o nome `TipoPRD`/aba "Tipos" por compatibilidade; na interface é chamada de "Categoria".)
+ */
 export interface TipoPRD {
   id: string;
   nome: string;
+  /** Texto padrão do PRD. Vazio = categoria sem PRD (só empenho). */
   template: string;
   criadoEm: string;
   atualizadoEm: string;

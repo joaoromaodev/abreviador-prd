@@ -23,6 +23,8 @@ export default function PaginaGerar() {
   const [gerarMesmoAssim, setGerarMesmoAssim] = useState(false);
 
   const hoje = useMemo(() => hojeISO(), []);
+  // Só categorias com template geram PRD; as sem template (só empenho) não aparecem aqui.
+  const tiposComTemplate = useMemo(() => tipos.filter((t) => t.template.trim() !== ""), [tipos]);
   const tipoSelecionado = useMemo(() => tipos.find((t) => t.id === tipoId) ?? null, [tipos, tipoId]);
   const contratosDoTipo = useMemo(
     () => (tipoId ? contratos.filter((c) => c.tipoId === tipoId) : []),
@@ -103,7 +105,7 @@ export default function PaginaGerar() {
     router.push("/");
   }
 
-  const semTipos = !carregandoTipos && tipos.length === 0;
+  const semTipos = !carregandoTipos && tiposComTemplate.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,15 +126,15 @@ export default function PaginaGerar() {
       <Card>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Rotulo htmlFor="gerar-tipo">Tipo de PRD</Rotulo>
+            <Rotulo htmlFor="gerar-tipo">Categoria</Rotulo>
             <Selecao
               id="gerar-tipo"
               value={tipoId}
               onChange={(e) => handleTrocarTipo(e.target.value)}
               disabled={carregandoTipos}
             >
-              <option value="">{carregandoTipos ? "Carregando..." : "Selecione um tipo"}</option>
-              {tipos.map((tipo) => (
+              <option value="">{carregandoTipos ? "Carregando..." : "Selecione uma categoria"}</option>
+              {tiposComTemplate.map((tipo) => (
                 <option key={tipo.id} value={tipo.id}>
                   {tipo.nome}
                 </option>
@@ -149,11 +151,11 @@ export default function PaginaGerar() {
             >
               <option value="">
                 {!tipoSelecionado
-                  ? "Escolha o tipo primeiro"
+                  ? "Escolha a categoria primeiro"
                   : carregandoContratos
                     ? "Carregando..."
                     : contratosDoTipo.length === 0
-                      ? "Nenhum contrato deste tipo"
+                      ? "Nenhum contrato desta categoria"
                       : "Selecione um contrato"}
               </option>
               {contratosDoTipo.map((contrato) => (
@@ -167,13 +169,13 @@ export default function PaginaGerar() {
 
         {semTipos && (
           <p className="mt-4 text-sm text-gray-500">
-            Nenhum tipo cadastrado ainda. Crie um em <strong>Cadastros → Tipos de PRD</strong>.
+            Nenhuma categoria com modelo de PRD ainda. Crie uma em <strong>Cadastros → Categorias</strong>.
           </p>
         )}
 
         {tipoSelecionado && contratosDoTipo.length === 0 && !carregandoContratos && (
           <p className="mt-4 text-sm text-gray-500">
-            Este tipo ainda não tem contratos. Cadastre um em <strong>Cadastros → Contratos</strong>.
+            Esta categoria ainda não tem contratos. Cadastre um em <strong>Cadastros → Contratos</strong>.
           </p>
         )}
 

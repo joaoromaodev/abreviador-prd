@@ -19,10 +19,11 @@ export async function POST(request: Request) {
   try {
     const corpo = await request.json();
     const nome = String(corpo?.nome ?? "").trim();
+    // Template opcional: categoria sem template não gera PRD (só serve para empenho/classificação).
     const template = String(corpo?.template ?? "").trim();
 
-    if (!nome || !template) {
-      return NextResponse.json({ erro: "Nome e texto padrão são obrigatórios." }, { status: 400 });
+    if (!nome) {
+      return NextResponse.json({ erro: "Informe o nome da categoria." }, { status: 400 });
     }
 
     const novo = await criarTipo({ nome, template });

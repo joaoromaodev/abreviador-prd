@@ -31,8 +31,8 @@ export default function PaginaTipos() {
     e.preventDefault();
     const nome = nomeForm.trim();
     const template = templateForm.trim();
-    if (!nome || !template) {
-      setErro("Preencha o nome e o texto padrão do tipo.");
+    if (!nome) {
+      setErro("Informe o nome da categoria.");
       return;
     }
     setErro(null);
@@ -60,7 +60,7 @@ export default function PaginaTipos() {
   }
 
   async function handleRemover(tipo: TipoPRD) {
-    const confirmou = window.confirm(`Remover o tipo "${tipo.nome}"? Os contratos vinculados a ele continuarão salvos.`);
+    const confirmou = window.confirm(`Remover a categoria "${tipo.nome}"? Os contratos vinculados a ela continuarão salvos.`);
     if (!confirmou) return;
     try {
       await remover(tipo.id);
@@ -73,9 +73,11 @@ export default function PaginaTipos() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Tipos de PRD</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Categorias</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Cada tipo guarda o <strong>texto padrão</strong> usado para montar os PRDs. Use marcadores no texto:
+          Categoria do contrato (Locação, Terceirizada, Consumo, Obra, Convênio…). O{" "}
+          <strong>texto padrão</strong> (modelo de PRD) é <strong>opcional</strong>: deixe em branco para categorias
+          que só são empenhadas (não geram PRD). Quando preenchido, use os marcadores:
         </p>
         <ul className="mt-2 space-y-1 text-sm text-gray-500">
           <li>
@@ -113,16 +115,16 @@ export default function PaginaTipos() {
       <Card>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="max-w-md">
-            <Rotulo htmlFor="campo-nome-tipo">Nome do tipo</Rotulo>
+            <Rotulo htmlFor="campo-nome-tipo">Nome da categoria</Rotulo>
             <CampoTexto
               id="campo-nome-tipo"
               value={nomeForm}
               onChange={(e) => setNomeForm(e.target.value)}
-              placeholder="ex.: Locação de Imóveis"
+              placeholder="ex.: Locação de Imóveis, Consumo, Obra…"
             />
           </div>
           <div>
-            <Rotulo htmlFor="campo-template">Texto padrão</Rotulo>
+            <Rotulo htmlFor="campo-template">Texto padrão do PRD (opcional)</Rotulo>
             <AreaTexto
               id="campo-template"
               rows={8}
@@ -162,7 +164,7 @@ export default function PaginaTipos() {
 
           <div className="flex gap-2">
             <Botao type="submit" disabled={salvando}>
-              {editandoId ? "Salvar edição" : "Adicionar tipo"}
+              {editandoId ? "Salvar edição" : "Adicionar categoria"}
             </Botao>
             {editandoId && (
               <Botao type="button" variante="secundario" onClick={limparFormulario} disabled={salvando}>
@@ -182,16 +184,20 @@ export default function PaginaTipos() {
         {carregando ? (
           <p className="py-6 text-center text-sm text-gray-400">Carregando...</p>
         ) : tipos.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">Nenhum tipo cadastrado ainda.</p>
+          <p className="py-6 text-center text-sm text-gray-400">Nenhuma categoria cadastrada ainda.</p>
         ) : (
           tipos.map((tipo) => (
             <Card key={tipo.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="font-medium text-gray-900">{tipo.nome}</h2>
-                  <p className="mt-1 max-w-2xl whitespace-pre-wrap break-words font-mono text-xs text-gray-500">
-                    {tipo.template}
-                  </p>
+                  {tipo.template.trim() ? (
+                    <p className="mt-1 max-w-2xl whitespace-pre-wrap break-words font-mono text-xs text-gray-500">
+                      {tipo.template}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs italic text-gray-400">Sem modelo de PRD (categoria só de empenho).</p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Botao type="button" variante="secundario" onClick={() => handleEditar(tipo)}>

@@ -7,7 +7,7 @@ import { useSessao } from "@/components/SessaoProvider";
 
 const SUBABAS = [
   { href: "/cadastros/contratos", label: "Contratos" },
-  { href: "/cadastros/tipos", label: "Tipos de PRD" },
+  { href: "/cadastros/tipos", label: "Categorias" },
   { href: "/cadastros/palavras", label: "Palavras / Abreviações" },
   { href: "/cadastros/usuarios", label: "Usuários" },
 ] as const;
