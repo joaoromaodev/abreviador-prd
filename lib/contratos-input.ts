@@ -1,12 +1,13 @@
+import { normalizarDadosEmpenho } from "@/lib/empenho";
 import type { DadosContrato } from "@/lib/sheets/contratos";
 import type { ModalidadeContrato } from "@/lib/types";
 
 /** Normaliza o corpo de uma requisição em DadosContrato, ou devolve uma mensagem de erro de validação. */
 export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
   const dados = corpo as Record<string, unknown> | null;
+  // tipoId é OPCIONAL: contrato sem tipo existe só para empenho (CEO), sem gerar PRD.
   const tipoId = String(dados?.tipoId ?? "").trim();
   const nome = String(dados?.nome ?? "").trim();
-  if (!tipoId) return "Selecione o tipo do contrato.";
   if (!nome) return "Informe uma identificação para o contrato.";
 
   const temTermoAditivo = dados?.temTermoAditivo === true;
@@ -21,6 +22,7 @@ export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
 
   const valores = normalizarValores(dados?.valores);
   const modalidades = lerModalidades(dados?.modalidades);
+  const dadosEmpenho = normalizarDadosEmpenho(dados?.dadosEmpenho);
 
   return {
     tipoId,
@@ -32,6 +34,7 @@ export function lerCorpoContrato(corpo: unknown): DadosContrato | string {
     vigenciaIndeterminada,
     valores,
     modalidades,
+    dadosEmpenho,
   };
 }
 

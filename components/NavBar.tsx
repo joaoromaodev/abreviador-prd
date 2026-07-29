@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MODULOS } from "@/lib/setores";
 import { useSessao } from "./SessaoProvider";
 
-const ABAS_BASE = [
-  { href: "/", label: "Abreviador" },
-  { href: "/modelos", label: "Modelos de PRD" },
-  { href: "/calculadora", label: "Calculadora de Locação" },
-] as const;
-
-const ABAS_ADMIN = [{ href: "/cadastros", label: "Cadastros" }] as const;
+// Abreviador é a home genérica: acessível a qualquer autenticado (não é gated por setor).
+const ABA_HOME = { href: "/", label: "Abreviador" } as const;
+const ABA_CADASTROS = { href: "/cadastros", label: "Cadastros" } as const;
 
 function abaAtiva(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
@@ -33,9 +30,12 @@ async function sair() {
 
 export function NavBar() {
   const pathname = usePathname();
-  const { usuario, isAdmin } = useSessao();
+  const { usuario, isAdmin, podeSetor } = useSessao();
   const configAtivo = pathname === "/configuracoes";
-  const abas = isAdmin ? [...ABAS_BASE, ...ABAS_ADMIN] : ABAS_BASE;
+
+  // Mostra só os módulos que o usuário pode acessar (admin vê todos, via podeSetor).
+  const abasModulos = MODULOS.filter((m) => podeSetor(m.setor)).map((m) => ({ href: m.href, label: m.label }));
+  const abas = [ABA_HOME, ...abasModulos, ...(isAdmin ? [ABA_CADASTROS] : [])];
 
   return (
     <header className="border-b border-gray-200 bg-white">

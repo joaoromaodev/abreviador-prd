@@ -13,6 +13,7 @@ export interface DadosFormContrato {
   vigenciaIndeterminada: boolean;
   valores: Record<string, string>;
   modalidades: ModalidadeContrato[];
+  dadosEmpenho: Record<string, string>;
 }
 
 async function extrairErro(resposta: Response, mensagemPadrao: string): Promise<string> {

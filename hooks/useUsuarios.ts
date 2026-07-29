@@ -32,7 +32,7 @@ export function useUsuarios() {
     void recarregar();
   }, [recarregar]);
 
-  async function adicionar(dados: { email: string; nome: string; papel: "admin" | "usuario" }) {
+  async function adicionar(dados: { email: string; nome: string; papel: "admin" | "usuario"; setores: string[] }) {
     const resposta = await fetch("/api/usuarios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,7 +43,7 @@ export function useUsuarios() {
     setUsuarios((atual) => [...atual, novo].sort((a, b) => a.nome.localeCompare(b.nome)));
   }
 
-  async function editar(email: string, dados: { nome: string; papel: "admin" | "usuario" }) {
+  async function editar(email: string, dados: { nome: string; papel: "admin" | "usuario"; setores: string[] }) {
     const resposta = await fetch(`/api/usuarios/${encodeURIComponent(email)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

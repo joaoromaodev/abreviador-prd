@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
 import { exigirAdmin } from "@/lib/auth/guard";
+import { normalizarSetores } from "@/lib/usuarios-input";
 import { buscarUsuario, criarUsuario, listarUsuarios } from "@/lib/sheets/usuarios";
 
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
     const email = String(corpo?.email ?? "").trim().toLowerCase();
     const nome = String(corpo?.nome ?? "").trim();
     const papel = corpo?.papel === "admin" ? "admin" : "usuario";
+    const setores = normalizarSetores(corpo?.setores);
 
     if (!RE_EMAIL.test(email)) {
       return NextResponse.json({ erro: "Informe um e-mail válido." }, { status: 400 });
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ erro: "Já existe um usuário com esse e-mail." }, { status: 409 });
     }
 
-    const novo = await criarUsuario({ email, nome, papel });
+    const novo = await criarUsuario({ email, nome, papel, setores });
     return NextResponse.json(novo, { status: 201 });
   } catch (erro) {
     return NextResponse.json({ erro: mensagemErro(erro) }, { status: 500 });

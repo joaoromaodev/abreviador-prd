@@ -4,14 +4,28 @@ import { adicionarLinha, atualizarLinha, lerLinhas, removerLinha, type Registro 
 
 // Aba "Usuarios": o e-mail (minúsculo) é a chave primária — guardado na coluna "id" para reusar os
 // helpers de table.ts (que indexam por "id").
+// "setores" fica por ÚLTIMO de propósito (mesmo padrão de contratos.ts): preserva a posição das
+// colunas já gravadas; linha antiga simplesmente não tem essa coluna e vira lista vazia.
 const ABA = "Usuarios";
-const COLUNAS = ["id", "nome", "papel", "criadoEm", "atualizadoEm"];
+const COLUNAS = ["id", "nome", "papel", "criadoEm", "atualizadoEm", "setores"];
+
+/** Lê a lista de setores gravada como JSON (aceita também vazio → []). */
+function lerSetores(bruto: string): string[] {
+  if (!bruto) return [];
+  try {
+    const lista = JSON.parse(bruto);
+    return Array.isArray(lista) ? lista.map((s) => String(s)).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
 
 function paraUsuario(registro: Registro): Usuario {
   return {
     email: registro.id,
     nome: registro.nome,
     papel: registro.papel === "admin" ? "admin" : "usuario",
+    setores: lerSetores(registro.setores),
     criadoEm: registro.criadoEm,
     atualizadoEm: registro.atualizadoEm,
   };
@@ -37,21 +51,34 @@ export async function buscarUsuario(email: string): Promise<Usuario | null> {
   return registro ? paraUsuario(registro) : null;
 }
 
-export async function criarUsuario(dados: { email: string; nome: string; papel: Papel }): Promise<Usuario> {
+export async function criarUsuario(dados: {
+  email: string;
+  nome: string;
+  papel: Papel;
+  setores: string[];
+}): Promise<Usuario> {
   const id = dados.email.trim().toLowerCase();
   const agora = new Date().toISOString();
-  await adicionarLinha(ABA, COLUNAS, { id, nome: dados.nome, papel: dados.papel, criadoEm: agora, atualizadoEm: agora });
-  return { email: id, nome: dados.nome, papel: dados.papel, criadoEm: agora, atualizadoEm: agora };
+  await adicionarLinha(ABA, COLUNAS, {
+    id,
+    nome: dados.nome,
+    papel: dados.papel,
+    criadoEm: agora,
+    atualizadoEm: agora,
+    setores: JSON.stringify(dados.setores),
+  });
+  return { email: id, nome: dados.nome, papel: dados.papel, setores: dados.setores, criadoEm: agora, atualizadoEm: agora };
 }
 
 export async function atualizarUsuario(
   email: string,
-  dados: { nome: string; papel: Papel }
+  dados: { nome: string; papel: Papel; setores: string[] }
 ): Promise<Usuario | null> {
   const agora = new Date().toISOString();
   const registro = await atualizarLinha(ABA, COLUNAS, email.trim().toLowerCase(), {
     nome: dados.nome,
     papel: dados.papel,
+    setores: JSON.stringify(dados.setores),
     atualizadoEm: agora,
   });
   return registro ? paraUsuario(registro) : null;
@@ -68,15 +95,16 @@ export async function removerUsuario(email: string): Promise<boolean> {
 export async function autorizarAcesso(
   email: string,
   nomeLogin: string
-): Promise<{ papel: Papel; nome: string } | null> {
+): Promise<{ papel: Papel; nome: string; setores: string[] } | null> {
   const alvo = email.trim().toLowerCase();
   const usuario = await buscarUsuario(alvo);
 
   if (emailsBootstrap().includes(alvo)) {
-    return { papel: "admin", nome: usuario?.nome || nomeLogin };
+    // Admin de bootstrap: papel admin ignora a checagem de setor de qualquer jeito.
+    return { papel: "admin", nome: usuario?.nome || nomeLogin, setores: usuario?.setores ?? [] };
   }
   if (usuario) {
-    return { papel: usuario.papel, nome: usuario.nome || nomeLogin };
+    return { papel: usuario.papel, nome: usuario.nome || nomeLogin, setores: usuario.setores };
   }
   return null;
 }

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { Usuario } from "@/lib/types";
+import { ROTULO_SETOR, SETORES, setoresEfetivos, type Setor } from "@/lib/setores";
 import { useUsuarios } from "@/hooks/useUsuarios";
 import { useSessao } from "@/components/SessaoProvider";
 import { Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
@@ -13,6 +14,7 @@ export default function PaginaUsuarios() {
   const [email, setEmail] = useState("");
   const [nome, setNome] = useState("");
   const [papel, setPapel] = useState<"admin" | "usuario">("usuario");
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [editandoEmail, setEditandoEmail] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -21,8 +23,13 @@ export default function PaginaUsuarios() {
     setEmail("");
     setNome("");
     setPapel("usuario");
+    setSetores([]);
     setEditandoEmail(null);
     setErro(null);
+  }
+
+  function alternarSetor(setor: Setor, marcado: boolean) {
+    setSetores((atual) => (marcado ? [...new Set([...atual, setor])] : atual.filter((s) => s !== setor)));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -39,9 +46,9 @@ export default function PaginaUsuarios() {
     setSalvando(true);
     try {
       if (editandoEmail) {
-        await editar(editandoEmail, { nome: nome.trim(), papel });
+        await editar(editandoEmail, { nome: nome.trim(), papel, setores });
       } else {
-        await adicionar({ email: email.trim().toLowerCase(), nome: nome.trim(), papel });
+        await adicionar({ email: email.trim().toLowerCase(), nome: nome.trim(), papel, setores });
       }
       limparFormulario();
     } catch (e) {
@@ -56,6 +63,7 @@ export default function PaginaUsuarios() {
     setEmail(u.email);
     setNome(u.nome);
     setPapel(u.papel);
+    setSetores((u.setores ?? []).filter((s): s is Setor => (SETORES as readonly string[]).includes(s)));
     setErro(null);
   }
 
@@ -74,9 +82,9 @@ export default function PaginaUsuarios() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Usuários</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Quem pode entrar no sistema e com qual papel. <strong>Admin</strong> edita contratos, tipos, palavras e
-          configurações; <strong>usuário</strong> só gera PRDs e usa o Abreviador. O e-mail deve ser o da conta Google
-          da pessoa.
+          Quem pode entrar no sistema, com qual papel e em quais setores. <strong>Admin</strong> acessa tudo e
+          gerencia usuários, contratos, tipos e configurações; <strong>usuário</strong> acessa só os módulos dos
+          setores marcados. O e-mail deve ser o da conta Google da pessoa.
         </p>
       </div>
 
@@ -116,6 +124,34 @@ export default function PaginaUsuarios() {
               onChange={(e) => setNome(e.target.value)}
               placeholder="Nome da pessoa"
             />
+          </div>
+          <div>
+            <Rotulo>Setores (módulos que o usuário acessa)</Rotulo>
+            {papel === "admin" ? (
+              <p className="text-sm text-gray-500">Admin acessa todos os setores e gerencia usuários e cadastros.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-4">
+                  {SETORES.map((setor) => (
+                    <label key={setor} className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={setores.includes(setor)}
+                        onChange={(e) => alternarSetor(setor, e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      {ROTULO_SETOR[setor]}
+                    </label>
+                  ))}
+                </div>
+                {setores.length === 0 && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Sem setor marcado: por retrocompatibilidade o acesso recai em CPED (PRD). Marque explicitamente
+                    o(s) setor(es) desejado(s).
+                  </p>
+                )}
+              </>
+            )}
           </div>
           <div className="flex gap-2">
             <Botao type="submit" disabled={salvando}>
@@ -159,6 +195,11 @@ export default function PaginaUsuarios() {
                     {eu?.email === u.email && <span className="text-xs text-gray-400">(você)</span>}
                   </div>
                   <p className="mt-1 text-xs text-gray-500">{u.email}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {u.papel === "admin"
+                      ? "Todos os setores"
+                      : `Setores: ${setoresEfetivos(u.setores).join(", ")}`}
+                  </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Botao type="button" variante="secundario" onClick={() => handleEditar(u)}>

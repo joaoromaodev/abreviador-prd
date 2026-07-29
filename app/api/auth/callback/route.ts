@@ -29,7 +29,12 @@ export async function GET(request: NextRequest) {
     const acesso = await autorizarAcesso(usuario.email, usuario.nome);
     if (!acesso) return loginInvalido("nao-autorizado");
 
-    const token = await assinarSessao({ email: usuario.email, nome: acesso.nome, papel: acesso.papel });
+    const token = await assinarSessao({
+      email: usuario.email,
+      nome: acesso.nome,
+      papel: acesso.papel,
+      setores: acesso.setores,
+    });
     const resposta = NextResponse.redirect(`${origin}/`);
     resposta.cookies.set(COOKIE_SESSAO, token, opcoesCookie());
     resposta.cookies.delete("oauth_state");

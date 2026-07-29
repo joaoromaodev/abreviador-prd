@@ -10,11 +10,18 @@ export interface Configuracoes {
   reaplicarAteEstabilizar: boolean;
 }
 
-/** Usuário do sistema. O e-mail (minúsculo) é a chave; `papel` define o que pode fazer. */
+/**
+ * Usuário do sistema. O e-mail (minúsculo) é a chave.
+ * - `papel`: "admin" tem acesso total (ignora a checagem de setor) e gerencia usuários/cadastros;
+ *   "usuario" acessa só os módulos dos setores listados em `setores`.
+ * - `setores`: setores que o usuário comum pode acessar (ex.: ["CPED"], ["CEO"]). É ORTOGONAL ao
+ *   papel. Lista vazia = tratada como ["CPED"] por retrocompatibilidade (ver lib/setores.ts).
+ */
 export interface Usuario {
   email: string;
   nome: string;
   papel: "admin" | "usuario";
+  setores: string[];
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -40,9 +47,17 @@ export interface ModalidadeContrato {
   valores: Record<string, string>;
 }
 
-/** Contrato cadastrado e amarrado a um tipo. `valores` guarda os campos `{}` do template do tipo. */
+/**
+ * Contrato cadastrado. É a fonte de dados COMPARTILHADA entre os setores:
+ * - CPED (PRD): usa `tipoId` + `valores`/`modalidades` (campos derivados do template do tipo).
+ * - CEO (empenho): usa `dadosEmpenho` (bloco autocontido, independente do tipo) + vigência.
+ *
+ * `tipoId` é OPCIONAL: contrato sem tipo não gera PRD (some do gerador da CPED, que filtra por
+ * `tipoId`) e existe só para o empenho da CEO.
+ */
 export interface Contrato {
   id: string;
+  /** Tipo de PRD amarrado (CPED). Vazio = contrato só de empenho, sem PRD. */
   tipoId: string;
   /** Identificação para escolher o contrato (ex.: "Sede Administrativa - 123/2020"). */
   nome: string;
@@ -56,6 +71,12 @@ export interface Contrato {
   valores: Record<string, string>;
   /** Modalidades do contrato (campos `[[...]]`). Vazio quando o tipo não usa modalidades (ex.: Locação). */
   modalidades: ModalidadeContrato[];
+  /**
+   * Dados para o empenho no SIAFE (setor CEO). Bloco autocontido com schema FIXO (ver
+   * lib/empenho.ts): não depende do tipo/template e vale inclusive para contratos sem PRD.
+   * Vazio em linhas antigas.
+   */
+  dadosEmpenho: Record<string, string>;
   criadoEm: string;
   atualizadoEm: string;
 }

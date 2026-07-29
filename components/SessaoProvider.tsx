@@ -2,20 +2,29 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { podeAcessarSetor, type Setor } from "@/lib/setores";
 
 export interface UsuarioSessao {
   email: string;
   nome: string;
   papel: "admin" | "usuario";
+  setores: string[];
 }
 
 interface ValorSessao {
   usuario: UsuarioSessao | null;
   isAdmin: boolean;
   carregando: boolean;
+  /** True se o usuário atual pode acessar o setor (admin sempre pode). False enquanto carrega. */
+  podeSetor: (setor: Setor) => boolean;
 }
 
-const SessaoContext = createContext<ValorSessao>({ usuario: null, isAdmin: false, carregando: true });
+const SessaoContext = createContext<ValorSessao>({
+  usuario: null,
+  isAdmin: false,
+  carregando: true,
+  podeSetor: () => false,
+});
 
 export function useSessao(): ValorSessao {
   return useContext(SessaoContext);
@@ -55,8 +64,13 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
   }, [carregando, usuario, pathname, router]);
 
+  const podeSetor = (setor: Setor): boolean =>
+    Boolean(usuario) && podeAcessarSetor(usuario as UsuarioSessao, setor);
+
   return (
-    <SessaoContext.Provider value={{ usuario, isAdmin: usuario?.papel === "admin", carregando }}>
+    <SessaoContext.Provider
+      value={{ usuario, isAdmin: usuario?.papel === "admin", carregando, podeSetor }}
+    >
       {children}
     </SessaoContext.Provider>
   );

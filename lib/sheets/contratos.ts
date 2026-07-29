@@ -3,8 +3,8 @@ import type { Contrato, ModalidadeContrato } from "@/lib/types";
 import { adicionarLinha, atualizarLinha, lerLinhas, removerLinha, type Registro } from "./table";
 
 const ABA = "Contratos";
-// "modalidades" fica por ÚLTIMO de propósito: preserva a posição das colunas já gravadas nas
-// planilhas existentes (linhas antigas simplesmente não têm essa coluna e viram lista vazia).
+// Colunas novas entram sempre por ÚLTIMO de propósito: preservam a posição das colunas já gravadas
+// nas planilhas existentes (linhas antigas simplesmente não têm a coluna e viram valor vazio).
 const COLUNAS = [
   "id",
   "tipoId",
@@ -18,6 +18,7 @@ const COLUNAS = [
   "atualizadoEm",
   "modalidades",
   "vigenciaIndeterminada",
+  "dadosEmpenho",
 ];
 
 export interface DadosContrato {
@@ -30,6 +31,7 @@ export interface DadosContrato {
   vigenciaIndeterminada: boolean;
   valores: Record<string, string>;
   modalidades: ModalidadeContrato[];
+  dadosEmpenho: Record<string, string>;
 }
 
 function lerValores(bruto: string): Record<string, string> {
@@ -74,6 +76,7 @@ function paraContrato(registro: Registro): Contrato {
     vigenciaIndeterminada: registro.vigenciaIndeterminada === "true",
     valores: lerValores(registro.valores),
     modalidades: lerModalidades(registro.modalidades),
+    dadosEmpenho: lerValores(registro.dadosEmpenho),
     criadoEm: registro.criadoEm,
     atualizadoEm: registro.atualizadoEm,
   };
@@ -90,6 +93,7 @@ function paraCampos(dados: DadosContrato): Registro {
     vigenciaIndeterminada: String(dados.vigenciaIndeterminada),
     valores: JSON.stringify(dados.valores),
     modalidades: JSON.stringify(dados.modalidades ?? []),
+    dadosEmpenho: JSON.stringify(dados.dadosEmpenho ?? {}),
   };
 }
 

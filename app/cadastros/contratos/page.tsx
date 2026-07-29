@@ -8,6 +8,7 @@ import {
   TIPOS_LICITACAO,
 } from "@/lib/constants";
 import { extrairCampos, rotuloCampo, TOKEN_TEXTO_CONTRATO, TOKEN_TEXTO_TA } from "@/lib/template";
+import { CAMPOS_EMPENHO } from "@/lib/empenho";
 import { hojeISO } from "@/lib/vigencia";
 import type { Contrato, ModalidadeContrato } from "@/lib/types";
 import { useContratos } from "@/hooks/useContratos";
@@ -86,6 +87,7 @@ export default function PaginaContratos() {
   const [vigenciaIndeterminada, setVigenciaIndeterminada] = useState(ESTADO_INICIAL.vigenciaIndeterminada);
   const [valores, setValores] = useState<Record<string, string>>({});
   const [modalidades, setModalidades] = useState<ModalidadeContrato[]>([]);
+  const [dadosEmpenho, setDadosEmpenho] = useState<Record<string, string>>({});
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -134,12 +136,17 @@ export default function PaginaContratos() {
     setVigenciaIndeterminada(ESTADO_INICIAL.vigenciaIndeterminada);
     setValores({});
     setModalidades([]);
+    setDadosEmpenho({});
     setEditandoId(null);
     setErro(null);
   }
 
   function setValor(campo: string, valor: string) {
     setValores((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  function setDadoEmpenho(campo: string, valor: string) {
+    setDadosEmpenho((atual) => ({ ...atual, [campo]: valor }));
   }
 
   function adicionarModalidade() {
@@ -162,10 +169,6 @@ export default function PaginaContratos() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!tipoId) {
-      setErro("Selecione o tipo do contrato.");
-      return;
-    }
     if (!nome.trim()) {
       setErro("Informe uma identificação para o contrato.");
       return;
@@ -200,6 +203,13 @@ export default function PaginaContratos() {
 
     const quantidadeNum = temTermoAditivo ? Math.max(1, Number(quantidade) || 1) : 0;
 
+    // Bloco de empenho (CEO): guarda só as chaves do schema, aparadas.
+    const dadosEmpenhoFinais: Record<string, string> = {};
+    for (const { chave } of CAMPOS_EMPENHO) {
+      const valor = (dadosEmpenho[chave] ?? "").trim();
+      if (valor) dadosEmpenhoFinais[chave] = valor;
+    }
+
     setErro(null);
     setSalvando(true);
     try {
@@ -213,6 +223,7 @@ export default function PaginaContratos() {
         vigenciaIndeterminada,
         valores: valoresFinais,
         modalidades: modalidadesFinais,
+        dadosEmpenho: dadosEmpenhoFinais,
       };
       if (editandoId) {
         await editar(editandoId, dados);
@@ -238,6 +249,7 @@ export default function PaginaContratos() {
     setVigenciaIndeterminada(contrato.vigenciaIndeterminada ?? false);
     setValores(contrato.valores);
     setModalidades(contrato.modalidades ?? []);
+    setDadosEmpenho(contrato.dadosEmpenho ?? {});
     setErro(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -274,20 +286,23 @@ export default function PaginaContratos() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Rotulo htmlFor="campo-tipo">Tipo</Rotulo>
+              <Rotulo htmlFor="campo-tipo">Tipo de PRD (opcional)</Rotulo>
               <Selecao
                 id="campo-tipo"
                 value={tipoId}
                 onChange={(e) => setTipoId(e.target.value)}
                 disabled={carregandoTipos}
               >
-                <option value="">{carregandoTipos ? "Carregando..." : "Selecione um tipo"}</option>
+                <option value="">{carregandoTipos ? "Carregando..." : "Sem tipo — só empenho (CEO)"}</option>
                 {tipos.map((tipo) => (
                   <option key={tipo.id} value={tipo.id}>
                     {tipo.nome}
                   </option>
                 ))}
               </Selecao>
+              <p className="mt-1 text-xs text-gray-500">
+                Com tipo: gera PRD (CPED) e aparece no empenho. Sem tipo: contrato só de empenho (CEO), sem PRD.
+              </p>
             </div>
             <div>
               <Rotulo htmlFor="campo-identificacao">Identificação do contrato</Rotulo>
@@ -512,8 +527,38 @@ export default function PaginaContratos() {
             </>
           )}
 
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/50 px-4 py-3">
+            <h3 className="text-sm font-medium text-gray-700">Dados para Empenho (CEO)</h3>
+            <p className="mt-1 text-xs text-gray-500">
+              Dados que a equipe de empenho (CEO) consulta para lançar a nota de empenho no SIAFE. São
+              independentes do tipo de PRD — preencha o que fizer sentido para este contrato. Deixe em branco
+              se este contrato não é empenhado aqui.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              {CAMPOS_EMPENHO.map((campo) => (
+                <div key={campo.chave} className={campo.longo ? "sm:col-span-2" : ""}>
+                  <Rotulo htmlFor={`empenho-${campo.chave}`}>{campo.rotulo}</Rotulo>
+                  {campo.longo ? (
+                    <AreaTexto
+                      id={`empenho-${campo.chave}`}
+                      rows={2}
+                      value={dadosEmpenho[campo.chave] ?? ""}
+                      onChange={(e) => setDadoEmpenho(campo.chave, e.target.value)}
+                    />
+                  ) : (
+                    <CampoTexto
+                      id={`empenho-${campo.chave}`}
+                      value={dadosEmpenho[campo.chave] ?? ""}
+                      onChange={(e) => setDadoEmpenho(campo.chave, e.target.value)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-2">
-            <Botao type="submit" disabled={salvando || !tipoId}>
+            <Botao type="submit" disabled={salvando}>
               {editandoId ? "Salvar edição" : "Adicionar contrato"}
             </Botao>
             {editandoId && (
@@ -561,7 +606,9 @@ export default function PaginaContratos() {
                     />
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    {tiposPorId.get(contrato.tipoId)?.nome ?? "Tipo removido"}
+                    {contrato.tipoId
+                      ? (tiposPorId.get(contrato.tipoId)?.nome ?? "Tipo removido")
+                      : "Só empenho (sem PRD)"}
                     {contrato.temTermoAditivo
                       ? ` · ${contrato.quantidadeTermosAditivos}º termo aditivo`
                       : " · sem termo aditivo"}

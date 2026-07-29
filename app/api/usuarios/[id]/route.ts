@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
 import { exigirAdmin } from "@/lib/auth/guard";
+import { normalizarSetores } from "@/lib/usuarios-input";
 import { atualizarUsuario, removerUsuario } from "@/lib/sheets/usuarios";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const corpo = await request.json();
     const nome = String(corpo?.nome ?? "").trim();
     const papel = corpo?.papel === "admin" ? "admin" : "usuario";
+    const setores = normalizarSetores(corpo?.setores);
 
     if (!nome) {
       return NextResponse.json({ erro: "Informe o nome do usuário." }, { status: 400 });
@@ -20,7 +22,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ erro: "Você não pode remover o seu próprio acesso de admin." }, { status: 400 });
     }
 
-    const atualizado = await atualizarUsuario(email, { nome, papel });
+    const atualizado = await atualizarUsuario(email, { nome, papel, setores });
     if (!atualizado) {
       return NextResponse.json({ erro: "Usuário não encontrado." }, { status: 404 });
     }

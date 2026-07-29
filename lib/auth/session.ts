@@ -8,6 +8,8 @@ export interface Sessao {
   email: string;
   nome: string;
   papel: Papel;
+  /** Setores que o usuário pode acessar (ver lib/setores.ts). Admin ignora essa checagem. */
+  setores: string[];
   /** Expiração em epoch ms. */
   exp: number;
 }
@@ -71,6 +73,9 @@ export async function lerSessaoDeToken(token: string | undefined): Promise<Sessa
   try {
     const sessao = JSON.parse(new TextDecoder().decode(deBase64Url(corpo))) as Sessao;
     if (!sessao.exp || sessao.exp < Date.now()) return null;
+    // Tokens emitidos antes da coluna `setores` não têm o campo: normaliza para lista vazia
+    // (tratada como ["CPED"] em setoresEfetivos), sem forçar novo login.
+    if (!Array.isArray(sessao.setores)) sessao.setores = [];
     return sessao;
   } catch {
     return null;
