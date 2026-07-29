@@ -28,9 +28,27 @@ export const MODALIDADES_TERCEIRIZADA = [
 // Quando escolhida, o trecho "MODALIDADE: [[modalidade]]" some inteiro do texto (rótulo incluído).
 export const MODALIDADE_NAO_IMPRESSA = "Prestação de Serviço";
 
-// Tipos de licitação e o único que NÃO leva número (Inexigibilidade).
-export const TIPOS_LICITACAO = ["Pregão Eletrônico", "Dispensa de Licitação", "Inexigibilidade"] as const;
-export const LICITACAO_SEM_NUMERO = "Inexigibilidade";
+// Modalidades de licitação disponíveis no cadastro de contrato.
+export const TIPOS_LICITACAO = [
+  "Pregão Eletrônico",
+  "Dispensa de Licitação",
+  "Inexigibilidade",
+  "Concurso",
+  "Convite",
+  "Tomada de Preços",
+  "Concorrência",
+  "Não Aplicável (não tem número)",
+  "Leilão",
+  "Diálogo Competitivo",
+] as const;
+
+// Modalidades que NÃO levam número (a caixa de número some no formulário).
+export const LICITACOES_SEM_NUMERO = ["Inexigibilidade", "Não Aplicável (não tem número)"] as const;
+
+/** True se a modalidade de licitação não leva número. */
+export function licitacaoSemNumero(tipo: string): boolean {
+  return (LICITACOES_SEM_NUMERO as readonly string[]).includes(tipo);
+}
 
 // Tipo de PRD semeado automaticamente quando a aba "Tipos" da planilha está vazia,
 // para o time já começar com o modelo de Locação de Imóveis pronto (e editável na tela).

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  LICITACAO_SEM_NUMERO,
+  licitacaoSemNumero,
   MODALIDADE_NAO_IMPRESSA,
   MODALIDADES_TERCEIRIZADA,
   TIPOS_LICITACAO,
@@ -33,14 +33,14 @@ function analisarLicitacao(valor: string): { tipo: string; numero: string } {
 /** Monta a string final da licitação. Dispensa não leva número; os demais levam quando informado. */
 function comporLicitacao(tipo: string, numero: string): string {
   if (!tipo) return "";
-  if (tipo === LICITACAO_SEM_NUMERO) return tipo;
+  if (licitacaoSemNumero(tipo)) return tipo;
   return numero.trim() ? `${tipo} nº ${numero.trim()}` : tipo;
 }
 
 /** Seleção do tipo de licitação + caixa de número (que some no tipo sem número). */
 function CampoLicitacao({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
   const { tipo, numero } = analisarLicitacao(value);
-  const temNumero = tipo !== "" && tipo !== LICITACAO_SEM_NUMERO;
+  const temNumero = tipo !== "" && !licitacaoSemNumero(tipo);
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <Selecao id={id} value={tipo} onChange={(e) => onChange(comporLicitacao(e.target.value, numero))}>
