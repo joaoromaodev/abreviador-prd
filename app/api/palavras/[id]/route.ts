@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
-import { exigirAdmin } from "@/lib/auth/guard";
+import { exigirAdminDoSetor } from "@/lib/auth/guard";
 import { atualizarPalavra, removerPalavra } from "@/lib/sheets/palavras";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirAdminDoSetor("CPED");
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const { id } = await params;
@@ -27,7 +27,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirAdminDoSetor("CPED");
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const { id } = await params;

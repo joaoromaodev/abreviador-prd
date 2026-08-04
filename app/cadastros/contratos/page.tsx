@@ -11,8 +11,10 @@ import { extrairCampos, rotuloCampo, TOKEN_TEXTO_CONTRATO, TOKEN_TEXTO_TA } from
 import { CAMPOS_EMPENHO } from "@/lib/empenho";
 import { hojeISO } from "@/lib/vigencia";
 import type { Contrato, ModalidadeContrato } from "@/lib/types";
+import { podeEditarBlocoEmpenho, podeEditarBlocoPRD } from "@/lib/setores";
 import { useContratos } from "@/hooks/useContratos";
 import { useTipos } from "@/hooks/useTipos";
+import { useSessao } from "@/components/SessaoProvider";
 import { AreaTexto, Botao, CampoTexto, Card, Rotulo, Selecao } from "@/components/ui";
 import { EtiquetaVigencia } from "@/components/EtiquetaVigencia";
 
@@ -75,6 +77,13 @@ const ESTADO_INICIAL = {
 };
 
 export default function PaginaContratos() {
+  const { usuario } = useSessao();
+  // Autorização por bloco: CEO edita só o Empenho, CPED só o PRD, master edita os dois.
+  // Os campos-base (identificação, vigência, termo aditivo) aparecem para qualquer admin/master.
+  const podePRD = usuario ? podeEditarBlocoPRD(usuario) : false;
+  const podeEmpenho = usuario ? podeEditarBlocoEmpenho(usuario) : false;
+  const isMaster = usuario?.papel === "master";
+
   const { tipos, carregando: carregandoTipos } = useTipos();
   const { contratos, carregando, erro: erroCarregamento, adicionar, editar, remover } = useContratos();
 
@@ -169,7 +178,7 @@ export default function PaginaContratos() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!tipoId) {
+    if (podePRD && !tipoId) {
       setErro("Selecione a categoria do contrato.");
       return;
     }
@@ -177,11 +186,11 @@ export default function PaginaContratos() {
       setErro("Informe uma identificação para o contrato.");
       return;
     }
-    if (usaModalidades && modalidades.length === 0) {
+    if (podePRD && usaModalidades && modalidades.length === 0) {
       setErro("Este tipo exige ao menos uma modalidade. Adicione uma abaixo.");
       return;
     }
-    if (usaModalidades && modalidades.some((m) => !m.nome.trim())) {
+    if (podePRD && usaModalidades && modalidades.some((m) => !m.nome.trim())) {
       setErro("Dê um nome a cada modalidade (ex.: Ensino Fundamental).");
       return;
     }
@@ -289,26 +298,28 @@ export default function PaginaContratos() {
       <Card>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Rotulo htmlFor="campo-tipo">Categoria</Rotulo>
-              <Selecao
-                id="campo-tipo"
-                value={tipoId}
-                onChange={(e) => setTipoId(e.target.value)}
-                disabled={carregandoTipos}
-              >
-                <option value="">{carregandoTipos ? "Carregando..." : "Selecione a categoria"}</option>
-                {tipos.map((tipo) => (
-                  <option key={tipo.id} value={tipo.id}>
-                    {tipo.nome}
-                  </option>
-                ))}
-              </Selecao>
-              <p className="mt-1 text-xs text-gray-500">
-                Categoria do contrato (Locação, Terceirizada, Consumo, Obra, Convênio…). Categorias com modelo de PRD
-                geram PRD no CPED; as demais servem só para o empenho.
-              </p>
-            </div>
+            {podePRD && (
+              <div>
+                <Rotulo htmlFor="campo-tipo">Categoria</Rotulo>
+                <Selecao
+                  id="campo-tipo"
+                  value={tipoId}
+                  onChange={(e) => setTipoId(e.target.value)}
+                  disabled={carregandoTipos}
+                >
+                  <option value="">{carregandoTipos ? "Carregando..." : "Selecione a categoria"}</option>
+                  {tipos.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nome}
+                    </option>
+                  ))}
+                </Selecao>
+                <p className="mt-1 text-xs text-gray-500">
+                  Categoria do contrato (Locação, Terceirizada, Consumo, Obra, Convênio…). Categorias com modelo de
+                  PRD geram PRD no CPED; as demais servem só para o empenho.
+                </p>
+              </div>
+            )}
             <div>
               <Rotulo htmlFor="campo-identificacao">Identificação do contrato</Rotulo>
               <CampoTexto
@@ -353,7 +364,45 @@ export default function PaginaContratos() {
             </div>
           </div>
 
-          {tipoSelecionado && (
+          {/* Termo aditivo — dado-base do contrato: qualquer admin/master edita. */}
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={temTermoAditivo}
+                onChange={(e) => setTemTermoAditivo(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Este contrato tem termo aditivo
+            </label>
+            {podePRD ? (
+              <p className="mt-1 text-xs text-gray-500">
+                Também define o texto usado no PRD: <strong>sem</strong> termo aditivo usa o texto do contrato;{" "}
+                <strong>com</strong> termo aditivo usa o texto do termo aditivo (nunca os dois).
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-500">Marque se o contrato tem termo aditivo e informe o número.</p>
+            )}
+            {temTermoAditivo && (
+              <div className="mt-4 max-w-[12rem]">
+                <Rotulo htmlFor="campo-quantidade">Qual o número do termo aditivo?</Rotulo>
+                <CampoTexto
+                  id="campo-quantidade"
+                  type="number"
+                  min={1}
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                />
+                {podePRD && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Vira <code className="font-mono">({quantidade || "?"}º T.A)</code> no texto.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {podePRD && tipoSelecionado && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 {camposNormais.map((campo) => {
@@ -386,62 +435,33 @@ export default function PaginaContratos() {
                 })}
               </div>
 
-              <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={temTermoAditivo}
-                    onChange={(e) => setTemTermoAditivo(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  Este contrato tem termo aditivo
-                </label>
-                <p className="mt-1 text-xs text-gray-500">
-                  Define o texto usado no PRD: <strong>sem</strong> termo aditivo usa o texto do contrato;{" "}
-                  <strong>com</strong> termo aditivo usa o texto do termo aditivo (nunca os dois).
-                </p>
-
-                {!temTermoAditivo && usaTextoContrato && (
-                  <div className="mt-4">
-                    <Rotulo htmlFor={`campo-${TOKEN_TEXTO_CONTRATO}`}>{rotuloCampo(TOKEN_TEXTO_CONTRATO)}</Rotulo>
-                    <AreaTexto
-                      id={`campo-${TOKEN_TEXTO_CONTRATO}`}
-                      rows={2}
-                      value={valores[TOKEN_TEXTO_CONTRATO] ?? ""}
-                      onChange={(e) => setValor(TOKEN_TEXTO_CONTRATO, e.target.value)}
-                    />
-                  </div>
-                )}
-
-                {temTermoAditivo && (
-                  <div className="mt-4 flex flex-col gap-4">
-                    <div className="max-w-[12rem]">
-                      <Rotulo htmlFor="campo-quantidade">Qual o número do termo aditivo?</Rotulo>
-                      <CampoTexto
-                        id="campo-quantidade"
-                        type="number"
-                        min={1}
-                        value={quantidade}
-                        onChange={(e) => setQuantidade(e.target.value)}
+              {/* Texto do PRD (contrato ou termo aditivo), conforme o termo aditivo marcado acima. */}
+              {(usaTextoContrato || usaTextoTA) && (
+                <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+                  {!temTermoAditivo && usaTextoContrato && (
+                    <div>
+                      <Rotulo htmlFor={`campo-${TOKEN_TEXTO_CONTRATO}`}>{rotuloCampo(TOKEN_TEXTO_CONTRATO)}</Rotulo>
+                      <AreaTexto
+                        id={`campo-${TOKEN_TEXTO_CONTRATO}`}
+                        rows={2}
+                        value={valores[TOKEN_TEXTO_CONTRATO] ?? ""}
+                        onChange={(e) => setValor(TOKEN_TEXTO_CONTRATO, e.target.value)}
                       />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Vira <code className="font-mono">({quantidade || "?"}º T.A)</code> no texto.
-                      </p>
                     </div>
-                    {usaTextoTA && (
-                      <div>
-                        <Rotulo htmlFor={`campo-${TOKEN_TEXTO_TA}`}>{rotuloCampo(TOKEN_TEXTO_TA)}</Rotulo>
-                        <AreaTexto
-                          id={`campo-${TOKEN_TEXTO_TA}`}
-                          rows={2}
-                          value={valores[TOKEN_TEXTO_TA] ?? ""}
-                          onChange={(e) => setValor(TOKEN_TEXTO_TA, e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
+                  {temTermoAditivo && usaTextoTA && (
+                    <div>
+                      <Rotulo htmlFor={`campo-${TOKEN_TEXTO_TA}`}>{rotuloCampo(TOKEN_TEXTO_TA)}</Rotulo>
+                      <AreaTexto
+                        id={`campo-${TOKEN_TEXTO_TA}`}
+                        rows={2}
+                        value={valores[TOKEN_TEXTO_TA] ?? ""}
+                        onChange={(e) => setValor(TOKEN_TEXTO_TA, e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {usaModalidades && (
                 <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
@@ -532,6 +552,7 @@ export default function PaginaContratos() {
             </>
           )}
 
+          {podeEmpenho && (
           <div className="rounded-md border border-emerald-200 bg-emerald-50/50 px-4 py-3">
             <h3 className="text-sm font-medium text-gray-700">Dados para Empenho (CEO)</h3>
             <p className="mt-1 text-xs text-gray-500">
@@ -561,9 +582,10 @@ export default function PaginaContratos() {
               ))}
             </div>
           </div>
+          )}
 
           <div className="flex gap-2">
-            <Botao type="submit" disabled={salvando || !tipoId}>
+            <Botao type="submit" disabled={salvando || (podePRD && !tipoId)}>
               {editandoId ? "Salvar edição" : "Adicionar contrato"}
             </Botao>
             {editandoId && (
@@ -626,9 +648,11 @@ export default function PaginaContratos() {
                   <Botao type="button" variante="secundario" onClick={() => handleEditar(contrato)}>
                     Editar
                   </Botao>
-                  <Botao type="button" variante="perigo" onClick={() => handleRemover(contrato)}>
-                    Remover
-                  </Botao>
+                  {isMaster && (
+                    <Botao type="button" variante="perigo" onClick={() => handleRemover(contrato)}>
+                      Remover
+                    </Botao>
+                  )}
                 </div>
               </div>
             </Card>

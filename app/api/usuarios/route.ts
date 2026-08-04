@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
-import { exigirAdmin } from "@/lib/auth/guard";
-import { normalizarSetores } from "@/lib/usuarios-input";
+import { exigirMaster } from "@/lib/auth/guard";
+import { lerPapelInput, normalizarSetores } from "@/lib/usuarios-input";
 import { buscarUsuario, criarUsuario, listarUsuarios } from "@/lib/sheets/usuarios";
 
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function GET() {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirMaster();
   if ("resposta" in guarda) return guarda.resposta;
   try {
     return NextResponse.json(await listarUsuarios());
@@ -17,13 +17,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirMaster();
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const corpo = await request.json();
     const email = String(corpo?.email ?? "").trim().toLowerCase();
     const nome = String(corpo?.nome ?? "").trim();
-    const papel = corpo?.papel === "admin" ? "admin" : "usuario";
+    const papel = lerPapelInput(corpo?.papel);
     const setores = normalizarSetores(corpo?.setores);
 
     if (!RE_EMAIL.test(email)) {

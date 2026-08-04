@@ -20,23 +20,44 @@ function lerSetores(bruto: string): string[] {
   }
 }
 
+/** Converte o texto da coluna "papel" para o tipo. Valor desconhecido/antigo vira "usuario". */
+function lerPapel(bruto: string): Papel {
+  return bruto === "master" ? "master" : bruto === "admin" ? "admin" : "usuario";
+}
+
 function paraUsuario(registro: Registro): Usuario {
   return {
     email: registro.id,
     nome: registro.nome,
-    papel: registro.papel === "admin" ? "admin" : "usuario",
+    papel: lerPapel(registro.papel),
     setores: lerSetores(registro.setores),
     criadoEm: registro.criadoEm,
     atualizadoEm: registro.atualizadoEm,
   };
 }
 
-/** E-mails de admin "de fábrica" (variável de ambiente) — garantem acesso mesmo com a aba vazia. */
-export function emailsBootstrap(): string[] {
-  return (process.env.BOOTSTRAP_ADMIN_EMAILS ?? "")
+/** E-mails de MASTER "de fábrica". Garantem que sempre exista um master, mesmo com a aba vazia. */
+const MASTERS_PADRAO = ["joao.neto@seduc.pa.gov.br"];
+
+/** Lista de e-mails a partir de uma variável de ambiente separada por vírgula. */
+function emailsDeEnv(valor: string | undefined): string[] {
+  return (valor ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+}
+
+/**
+ * E-mails de MASTER: o padrão de fábrica (joao.neto) + os de BOOTSTRAP_MASTER_EMAILS.
+ * O padrão garante acesso master em produção mesmo sem configurar a env.
+ */
+export function emailsBootstrapMaster(): string[] {
+  return [...new Set([...MASTERS_PADRAO, ...emailsDeEnv(process.env.BOOTSTRAP_MASTER_EMAILS)])];
+}
+
+/** E-mails de admin (de setor) "de fábrica" (BOOTSTRAP_ADMIN_EMAILS) — acesso mesmo com a aba vazia. */
+export function emailsBootstrap(): string[] {
+  return emailsDeEnv(process.env.BOOTSTRAP_ADMIN_EMAILS);
 }
 
 export async function listarUsuarios(): Promise<Usuario[]> {
@@ -89,8 +110,10 @@ export async function removerUsuario(email: string): Promise<boolean> {
 }
 
 /**
- * Decide se um e-mail pode entrar e com qual papel. Admin de bootstrap sempre entra como admin;
- * senão, precisa estar cadastrado na aba Usuarios. Retorna null se não autorizado.
+ * Decide se um e-mail pode entrar e com qual papel. O bootstrap tem precedência sobre a aba
+ * (o master de fábrica não pode ser rebaixado por uma linha na planilha): master de bootstrap
+ * entra como master; admin de bootstrap entra como admin; senão, usa o papel da aba Usuarios.
+ * Retorna null se não autorizado.
  */
 export async function autorizarAcesso(
   email: string,
@@ -99,8 +122,12 @@ export async function autorizarAcesso(
   const alvo = email.trim().toLowerCase();
   const usuario = await buscarUsuario(alvo);
 
+  if (emailsBootstrapMaster().includes(alvo)) {
+    // Master de bootstrap: acesso total, ignora a checagem de setor.
+    return { papel: "master", nome: usuario?.nome || nomeLogin, setores: usuario?.setores ?? [] };
+  }
   if (emailsBootstrap().includes(alvo)) {
-    // Admin de bootstrap: papel admin ignora a checagem de setor de qualquer jeito.
+    // Admin de bootstrap (de setor): gated pelos setores da aba (vazio recai em CPED).
     return { papel: "admin", nome: usuario?.nome || nomeLogin, setores: usuario?.setores ?? [] };
   }
   if (usuario) {

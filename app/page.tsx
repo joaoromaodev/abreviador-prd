@@ -1,18 +1,30 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { aplicarAbreviacoes, dividirEmPedacos, verificarLimite } from "@/lib/abbreviation";
 import { STORAGE_KEYS } from "@/lib/constants";
+import { hrefInicial } from "@/lib/setores";
 import { readStorage, removeStorage } from "@/lib/storage";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { usePalavras } from "@/hooks/usePalavras";
+import { useSessao } from "@/components/SessaoProvider";
 import { AreaTexto, Botao, Card, Rotulo } from "@/components/ui";
 
 const TAMANHO_PEDACO_COPIA = 300;
 
 export default function PaginaAbreviador() {
+  const router = useRouter();
+  const { usuario, carregando: carregandoSessao, podeSetor } = useSessao();
   const { palavras, carregando: carregandoPalavras, erro: erroPalavras } = usePalavras();
   const { config, carregando: carregandoConfig, erro: erroConfig } = useConfiguracoes();
+
+  // O Abreviador é do CPED. Quem é só de outro setor (ex.: só CEO) não usa esta tela: manda pro
+  // seu módulo (ex.: Consulta para Empenho). É só UX — a proteção de dados está nos guards das /api.
+  const liberado = podeSetor("CPED");
+  useEffect(() => {
+    if (!carregandoSessao && usuario && !liberado) router.replace(hrefInicial(usuario));
+  }, [carregandoSessao, usuario, liberado, router]);
 
   const [textoEntrada, setTextoEntrada] = useState("");
   const [resultado, setResultado] = useState<string | null>(null);
@@ -68,6 +80,12 @@ export default function PaginaAbreviador() {
     () => (resultado !== null ? dividirEmPedacos(resultado, TAMANHO_PEDACO_COPIA) : []),
     [resultado]
   );
+
+  // Enquanto a sessão carrega, ou para quem vai ser redirecionado (sem CPED), não renderiza o
+  // Abreviador — evita o "flash" da tela antes do redirect.
+  if (carregandoSessao || !liberado) {
+    return <p className="py-10 text-center text-sm text-gray-400">Carregando...</p>;
+  }
 
   return (
     <div className="flex flex-col gap-6">

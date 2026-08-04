@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
-import { exigirAdmin, exigirSessao } from "@/lib/auth/guard";
+import { exigirMaster, exigirSessao } from "@/lib/auth/guard";
 import { LIMITE_CARACTERES_MAX, LIMITE_CARACTERES_MIN } from "@/lib/constants";
 import { obterConfiguracoes, salvarConfiguracoes } from "@/lib/sheets/configuracoes";
 
@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirMaster();
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const corpo = await request.json();

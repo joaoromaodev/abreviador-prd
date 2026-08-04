@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { podeAcessarSetor, type Setor } from "@/lib/setores";
+import {
+  ehAdminDoSetor,
+  podeAcessarSetor,
+  podeEditarContratos,
+  type Setor,
+} from "@/lib/setores";
 import { COOKIE_SESSAO, lerSessaoDeToken, type Sessao } from "./session";
 
 /** Lê e valida a sessão do cookie da requisição atual (ou null). */
@@ -18,12 +23,38 @@ export async function exigirSessao(): Promise<Resultado> {
   return { sessao };
 }
 
-/** Exige um usuário admin. Use nas rotas de escrita (POST/PUT/DELETE). */
-export async function exigirAdmin(): Promise<Resultado> {
+/** Exige o MASTER. Use nas rotas de usuários e configurações. */
+export async function exigirMaster(): Promise<Resultado> {
   const resultado = await exigirSessao();
   if ("resposta" in resultado) return resultado;
-  if (resultado.sessao.papel !== "admin") {
+  if (resultado.sessao.papel !== "master") {
+    return { resposta: NextResponse.json({ erro: "Acesso restrito ao master." }, { status: 403 }) };
+  }
+  return resultado;
+}
+
+/**
+ * Exige quem pode cadastrar/editar contratos (master ou qualquer admin). A autorização por BLOCO
+ * (PRD é do CPED, Empenho é do CEO) é aplicada na própria rota via aplicarPermissoesContrato.
+ */
+export async function exigirEdicaoContrato(): Promise<Resultado> {
+  const resultado = await exigirSessao();
+  if ("resposta" in resultado) return resultado;
+  if (!podeEditarContratos(resultado.sessao)) {
     return { resposta: NextResponse.json({ erro: "Acesso restrito a administradores." }, { status: 403 }) };
+  }
+  return resultado;
+}
+
+/**
+ * Exige master OU admin do setor informado. Use nos cadastros de um setor (ex.: Categorias e
+ * Palavras são do CPED).
+ */
+export async function exigirAdminDoSetor(setor: Setor): Promise<Resultado> {
+  const resultado = await exigirSessao();
+  if ("resposta" in resultado) return resultado;
+  if (!ehAdminDoSetor(resultado.sessao, setor)) {
+    return { resposta: NextResponse.json({ erro: `Acesso restrito ao admin do setor ${setor}.` }, { status: 403 }) };
   }
   return resultado;
 }

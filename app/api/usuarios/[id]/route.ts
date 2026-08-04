@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
-import { exigirAdmin } from "@/lib/auth/guard";
-import { normalizarSetores } from "@/lib/usuarios-input";
+import { exigirMaster } from "@/lib/auth/guard";
+import { lerPapelInput, normalizarSetores } from "@/lib/usuarios-input";
 import { atualizarUsuario, removerUsuario } from "@/lib/sheets/usuarios";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirMaster();
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const email = decodeURIComponent((await params).id).toLowerCase();
     const corpo = await request.json();
     const nome = String(corpo?.nome ?? "").trim();
-    const papel = corpo?.papel === "admin" ? "admin" : "usuario";
+    const papel = lerPapelInput(corpo?.papel);
     const setores = normalizarSetores(corpo?.setores);
 
     if (!nome) {
       return NextResponse.json({ erro: "Informe o nome do usuário." }, { status: 400 });
     }
-    // Evita o admin se rebaixar e perder o acesso sem querer.
-    if (email === guarda.sessao.email && papel !== "admin") {
-      return NextResponse.json({ erro: "Você não pode remover o seu próprio acesso de admin." }, { status: 400 });
+    // Evita o master se rebaixar e perder o próprio acesso de gestão sem querer.
+    if (email === guarda.sessao.email && papel !== "master") {
+      return NextResponse.json({ erro: "Você não pode remover o seu próprio acesso de master." }, { status: 400 });
     }
 
     const atualizado = await atualizarUsuario(email, { nome, papel, setores });
@@ -33,7 +33,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirMaster();
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const email = decodeURIComponent((await params).id).toLowerCase();

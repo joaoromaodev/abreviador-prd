@@ -12,15 +12,16 @@ export interface Configuracoes {
 
 /**
  * Usuário do sistema. O e-mail (minúsculo) é a chave.
- * - `papel`: "admin" tem acesso total (ignora a checagem de setor) e gerencia usuários/cadastros;
- *   "usuario" acessa só os módulos dos setores listados em `setores`.
- * - `setores`: setores que o usuário comum pode acessar (ex.: ["CPED"], ["CEO"]). É ORTOGONAL ao
- *   papel. Lista vazia = tratada como ["CPED"] por retrocompatibilidade (ver lib/setores.ts).
+ * - `papel`: "master" gerencia usuários/configurações e edita tudo (ignora a checagem de setor);
+ *   "admin" cria/edita contratos e cadastros do seu setor, sem tocar em usuários/config; "usuario"
+ *   só visualiza. Ver as regras exatas em lib/setores.ts.
+ * - `setores`: setores que admin/usuário podem acessar (ex.: ["CPED"], ["CEO"]). É ORTOGONAL ao
+ *   papel (master ignora). Lista vazia = tratada como ["CPED"] por retrocompatibilidade.
  */
 export interface Usuario {
   email: string;
   nome: string;
-  papel: "admin" | "usuario";
+  papel: "master" | "admin" | "usuario";
   setores: string[];
   criadoEm: string;
   atualizadoEm: string;

@@ -2,26 +2,30 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { podeAcessarSetor, type Setor } from "@/lib/setores";
+import { podeAcessarSetor, podeAlgumCadastro, type Setor } from "@/lib/setores";
 
 export interface UsuarioSessao {
   email: string;
   nome: string;
-  papel: "admin" | "usuario";
+  papel: "master" | "admin" | "usuario";
   setores: string[];
 }
 
 interface ValorSessao {
   usuario: UsuarioSessao | null;
-  isAdmin: boolean;
+  /** Master: gerencia usuários/configurações e edita qualquer bloco. */
+  isMaster: boolean;
+  /** Tem acesso à área de Cadastros (master ou admin). */
+  podeCadastros: boolean;
   carregando: boolean;
-  /** True se o usuário atual pode acessar o setor (admin sempre pode). False enquanto carrega. */
+  /** True se o usuário atual pode acessar o setor (master sempre pode). False enquanto carrega. */
   podeSetor: (setor: Setor) => boolean;
 }
 
 const SessaoContext = createContext<ValorSessao>({
   usuario: null,
-  isAdmin: false,
+  isMaster: false,
+  podeCadastros: false,
   carregando: true,
   podeSetor: () => false,
 });
@@ -69,7 +73,13 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessaoContext.Provider
-      value={{ usuario, isAdmin: usuario?.papel === "admin", carregando, podeSetor }}
+      value={{
+        usuario,
+        isMaster: usuario?.papel === "master",
+        podeCadastros: Boolean(usuario) && podeAlgumCadastro(usuario as UsuarioSessao),
+        carregando,
+        podeSetor,
+      }}
     >
       {children}
     </SessaoContext.Provider>

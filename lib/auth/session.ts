@@ -2,13 +2,19 @@
 // Usa só Web Crypto (crypto.subtle) + btoa/atob, então funciona tanto no Node (rotas) quanto no
 // edge (proxy). O conteúdo da sessão não é segredo — a assinatura garante só integridade.
 
-export type Papel = "admin" | "usuario";
+// Três níveis (ver lib/setores.ts para as regras de cada um):
+// - "master": poder total — gerencia usuários e configurações, edita qualquer bloco de contrato,
+//   ignora a checagem de setor.
+// - "admin": administrador de setor — cria/edita contratos (só o bloco do seu setor) e os cadastros
+//   do seu setor; NÃO gerencia usuários nem configurações. É gated pelos `setores`, como o usuário.
+// - "usuario": só visualiza os módulos dos seus `setores`.
+export type Papel = "master" | "admin" | "usuario";
 
 export interface Sessao {
   email: string;
   nome: string;
   papel: Papel;
-  /** Setores que o usuário pode acessar (ver lib/setores.ts). Admin ignora essa checagem. */
+  /** Setores que o usuário pode acessar (ver lib/setores.ts). Master ignora essa checagem. */
   setores: string[];
   /** Expiração em epoch ms. */
   exp: number;

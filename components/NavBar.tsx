@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { MODULOS } from "@/lib/setores";
 import { useSessao } from "./SessaoProvider";
 
-// Abreviador é a home genérica: acessível a qualquer autenticado (não é gated por setor).
+// Abreviador é a home do CPED (não é uma tela genérica): quem é só de outro setor não a vê.
 const ABA_HOME = { href: "/", label: "Abreviador" } as const;
 const ABA_CADASTROS = { href: "/cadastros", label: "Cadastros" } as const;
 
@@ -30,23 +30,27 @@ async function sair() {
 
 export function NavBar() {
   const pathname = usePathname();
-  const { usuario, isAdmin, podeSetor } = useSessao();
+  const { usuario, isMaster, podeCadastros, podeSetor } = useSessao();
   const configAtivo = pathname === "/configuracoes";
 
   // Mostra só os módulos que o usuário pode acessar (admin vê todos, via podeSetor).
+  // O Abreviador é do CPED: quem é só de outro setor (ex.: só CEO) não vê a aba nem tem o logo
+  // apontando pra ela — cai no primeiro módulo acessível.
+  const podeAbreviador = podeSetor("CPED");
   const abasModulos = MODULOS.filter((m) => podeSetor(m.setor)).map((m) => ({ href: m.href, label: m.label }));
-  const abas = [ABA_HOME, ...abasModulos, ...(isAdmin ? [ABA_CADASTROS] : [])];
+  const abas = [...(podeAbreviador ? [ABA_HOME] : []), ...abasModulos, ...(podeCadastros ? [ABA_CADASTROS] : [])];
+  const hrefHome = podeAbreviador ? "/" : (abasModulos[0]?.href ?? "/");
 
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto max-w-4xl px-4">
         <div className="flex items-center justify-between pt-3">
-          <Link href="/" className="text-sm font-semibold text-gray-900">
+          <Link href={hrefHome} className="text-sm font-semibold text-gray-900">
             Abreviador de PRDs
           </Link>
           <div className="flex items-center gap-2">
             {usuario && <span className="hidden text-xs text-gray-500 sm:inline">{usuario.nome}</span>}
-            {isAdmin && (
+            {isMaster && (
               <Link
                 href="/configuracoes"
                 aria-label="Configurações"

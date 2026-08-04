@@ -3,9 +3,12 @@
 import { useMemo, useState, type FormEvent } from "react";
 import type { PalavraAbreviacao } from "@/lib/types";
 import { usePalavras } from "@/hooks/usePalavras";
+import { useExigirAdminSetor } from "@/hooks/useExigirAdminSetor";
 import { Botao, CampoTexto, Card, Rotulo } from "@/components/ui";
 
 export default function PaginaPalavras() {
+  // Abreviações são insumo do Abreviador (PRD): só admin do CPED (ou master).
+  const liberado = useExigirAdminSetor("CPED");
   const { palavras, carregando, erro: erroCarregamento, adicionar, editar, remover } = usePalavras();
 
   const [palavraForm, setPalavraForm] = useState("");
@@ -72,6 +75,10 @@ export default function PaginaPalavras() {
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha ao remover.");
     }
+  }
+
+  if (!liberado) {
+    return <p className="py-10 text-center text-sm text-gray-400">Carregando...</p>;
   }
 
   return (

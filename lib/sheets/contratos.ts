@@ -102,6 +102,12 @@ export async function listarContratos(): Promise<Contrato[]> {
   return linhas.map(paraContrato).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
+export async function buscarContrato(id: string): Promise<Contrato | null> {
+  const linhas = await lerLinhas(ABA, COLUNAS);
+  const registro = linhas.find((l) => l.id === id);
+  return registro ? paraContrato(registro) : null;
+}
+
 export async function criarContrato(dados: DadosContrato): Promise<Contrato> {
   const id = gerarId();
   const agora = new Date().toISOString();

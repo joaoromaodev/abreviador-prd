@@ -4,9 +4,12 @@ import { useMemo, useState, type FormEvent } from "react";
 import { extrairCampos, rotuloCampo } from "@/lib/template";
 import type { TipoPRD } from "@/lib/types";
 import { useTipos } from "@/hooks/useTipos";
+import { useExigirAdminSetor } from "@/hooks/useExigirAdminSetor";
 import { AreaTexto, Botao, CampoTexto, Card, Rotulo } from "@/components/ui";
 
 export default function PaginaTipos() {
+  // Categorias são insumo de PRD: só admin do CPED (ou master).
+  const liberado = useExigirAdminSetor("CPED");
   const { tipos, carregando, erro: erroCarregamento, adicionar, editar, remover } = useTipos();
 
   const [nomeForm, setNomeForm] = useState("");
@@ -68,6 +71,10 @@ export default function PaginaTipos() {
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha ao remover.");
     }
+  }
+
+  if (!liberado) {
+    return <p className="py-10 text-center text-sm text-gray-400">Carregando...</p>;
   }
 
   return (

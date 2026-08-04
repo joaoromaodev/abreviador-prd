@@ -10,15 +10,15 @@ import { Botao, CampoTexto, Card, Rotulo } from "@/components/ui";
 
 export default function PaginaConfiguracoes() {
   const router = useRouter();
-  const { isAdmin, carregando: carregandoSessao } = useSessao();
+  const { isMaster, carregando: carregandoSessao } = useSessao();
   const { config, carregando, erro: erroCarregamento, salvar } = useConfiguracoes();
 
-  // Configurações são restritas a administradores.
+  // Configurações são restritas ao master.
   useEffect(() => {
-    if (!carregandoSessao && !isAdmin) router.replace("/");
-  }, [carregandoSessao, isAdmin, router]);
+    if (!carregandoSessao && !isMaster) router.replace("/");
+  }, [carregandoSessao, isMaster, router]);
 
-  if (carregandoSessao || !isAdmin) {
+  if (carregandoSessao || !isMaster) {
     return <p className="py-10 text-center text-sm text-gray-400">Carregando...</p>;
   }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mensagemErro } from "@/lib/api-errors";
-import { exigirAdmin, exigirSessao } from "@/lib/auth/guard";
+import { exigirAdminDoSetor, exigirSessao } from "@/lib/auth/guard";
 import { criarPalavra, listarPalavras } from "@/lib/sheets/palavras";
 
 export async function GET() {
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const guarda = await exigirAdmin();
+  const guarda = await exigirAdminDoSetor("CPED");
   if ("resposta" in guarda) return guarda.resposta;
   try {
     const corpo = await request.json();
