@@ -98,6 +98,7 @@ export const SECOES_EMPENHO: readonly SecaoEmpenho[] = [
         campos: [
           { chave: "acao", rotulo: "Ação Detalhada" },
           { chave: "ugr", rotulo: "Unidade Gestora Responsável" },
+          { chave: "descricao", rotulo: "Descrição", longo: true },
         ],
       },
     ],
