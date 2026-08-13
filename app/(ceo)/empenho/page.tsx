@@ -1,12 +1,33 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CAMPOS_EMPENHO, temDadosEmpenho } from "@/lib/empenho";
+import { SECOES_EMPENHO, temDadosEmpenho } from "@/lib/empenho";
 import { formatarData, hojeISO } from "@/lib/vigencia";
 import type { Contrato } from "@/lib/types";
 import { useContratos } from "@/hooks/useContratos";
 import { Botao, CampoTexto, Card } from "@/components/ui";
 import { EtiquetaVigencia } from "@/components/EtiquetaVigencia";
+
+/** Campo preenchido pronto para copiar. */
+interface CampoValor {
+  rotulo: string;
+  valor: string;
+}
+
+/** Grupo (subseção) de uma etapa com só os campos preenchidos. */
+interface GrupoPreenchido {
+  titulo?: string;
+  campos: CampoValor[];
+}
+
+/** Etapa do SIAFE com só o que este contrato tem preenchido. */
+interface SecaoPreenchida {
+  numero: number;
+  id: string;
+  titulo: string;
+  grupos: GrupoPreenchido[];
+  total: number;
+}
 
 /** Texto pesquisável de um contrato: nome + campos-chave do empenho. */
 function textoBusca(contrato: Contrato): string {
@@ -17,17 +38,48 @@ function textoBusca(contrato: Contrato): string {
     .toLowerCase();
 }
 
-function CampoCopiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
+/** Monta, para um contrato, as 3 etapas com apenas os campos preenchidos. */
+function montarSecoes(contrato: Contrato): SecaoPreenchida[] {
+  const e = contrato.dadosEmpenho ?? {};
+  return SECOES_EMPENHO.map((secao) => {
+    const grupos: GrupoPreenchido[] = secao.grupos
+      .map((grupo) => ({
+        titulo: grupo.titulo,
+        campos: grupo.campos
+          .filter((c) => (e[c.chave] ?? "").trim() !== "")
+          .map((c) => ({ rotulo: c.rotulo, valor: e[c.chave].trim() })),
+      }))
+      .filter((g) => g.campos.length > 0);
+    const total = grupos.reduce((n, g) => n + g.campos.length, 0);
+    return { numero: secao.numero, id: secao.id, titulo: secao.titulo, grupos, total };
+  });
+}
+
+/** Texto "Rótulo: valor" de uma etapa, para o botão Copiar da seção / de tudo. */
+function textoSecao(secao: SecaoPreenchida): string {
+  return secao.grupos
+    .flatMap((g) => g.campos.map((c) => `${c.rotulo}: ${c.valor}`))
+    .join("\n");
+}
+
+function useCopia(): [boolean, (texto: string) => void] {
   const [copiado, setCopiado] = useState(false);
-  async function copiar() {
-    try {
-      await navigator.clipboard.writeText(valor);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 1500);
-    } catch {
-      // Clipboard indisponível — o usuário pode selecionar manualmente.
-    }
+  function copiar(texto: string) {
+    navigator.clipboard.writeText(texto).then(
+      () => {
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 1500);
+      },
+      () => {
+        // Clipboard indisponível — o usuário pode selecionar manualmente.
+      }
+    );
   }
+  return [copiado, copiar];
+}
+
+function CampoCopiavel({ rotulo, valor }: CampoValor) {
+  const [copiado, copiar] = useCopia();
   return (
     <div className="flex items-start justify-between gap-3 border-b border-gray-100 py-2 last:border-0">
       <div className="min-w-0">
@@ -36,7 +88,7 @@ function CampoCopiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
       </div>
       <button
         type="button"
-        onClick={copiar}
+        onClick={() => copiar(valor)}
         className="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
         aria-label={`Copiar ${rotulo}`}
       >
@@ -46,11 +98,82 @@ function CampoCopiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
+/** Uma etapa do SIAFE como accordion: abre e mostra os campos preenchidos. */
+function SecaoAccordion({
+  secao,
+  aberta,
+  onToggle,
+}: {
+  secao: SecaoPreenchida;
+  aberta: boolean;
+  onToggle: () => void;
+}) {
+  const [copiado, copiar] = useCopia();
+  const vazia = secao.total === 0;
+  const painelId = `secao-${secao.id}`;
+  return (
+    <div className="overflow-hidden rounded-md border border-gray-200">
+      <div className="flex items-center justify-between gap-2 bg-gray-50 px-3 py-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={aberta}
+          aria-controls={painelId}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <span
+            className={`text-gray-400 transition-transform ${aberta ? "rotate-90" : ""}`}
+            aria-hidden="true"
+          >
+            ▶
+          </span>
+          <span className="truncate text-sm font-medium text-gray-800">
+            Etapa {secao.numero} · {secao.titulo}
+          </span>
+          <span className="shrink-0 text-xs text-gray-400">
+            {vazia ? "sem dados" : `${secao.total} ${secao.total === 1 ? "campo" : "campos"}`}
+          </span>
+        </button>
+        {!vazia && (
+          <button
+            type="button"
+            onClick={() => copiar(textoSecao(secao))}
+            className="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+          >
+            {copiado ? "Copiado!" : "Copiar seção"}
+          </button>
+        )}
+      </div>
+      {aberta && (
+        <div id={painelId} className="px-3 py-2">
+          {vazia ? (
+            <p className="py-2 text-xs text-gray-400">Nenhum dado preenchido nesta etapa.</p>
+          ) : (
+            secao.grupos.map((grupo, gi) => (
+              <div key={grupo.titulo ?? gi} className={gi > 0 ? "mt-3" : ""}>
+                {grupo.titulo && (
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    {grupo.titulo}
+                  </p>
+                )}
+                {grupo.campos.map((c) => (
+                  <CampoCopiavel key={c.rotulo} rotulo={c.rotulo} valor={c.valor} />
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PaginaEmpenho() {
   const { contratos, carregando, erro } = useContratos();
   const [busca, setBusca] = useState("");
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
-  const [copiadoTudo, setCopiadoTudo] = useState(false);
+  const [fechadas, setFechadas] = useState<Set<string>>(new Set());
+  const [copiadoTudo, copiarTudo] = useCopia();
 
   const hoje = useMemo(() => hojeISO(), []);
 
@@ -65,26 +188,24 @@ export default function PaginaEmpenho() {
     [contratos, selecionadoId]
   );
 
-  // Campos do schema com valor preenchido neste contrato.
-  const camposPreenchidos = useMemo(() => {
-    if (!selecionado) return [];
-    const e = selecionado.dadosEmpenho ?? {};
-    return CAMPOS_EMPENHO.filter((c) => (e[c.chave] ?? "").trim() !== "").map((c) => ({
-      rotulo: c.rotulo,
-      valor: e[c.chave].trim(),
-    }));
-  }, [selecionado]);
+  const secoes = useMemo(() => (selecionado ? montarSecoes(selecionado) : []), [selecionado]);
+  const totalPreenchido = useMemo(() => secoes.reduce((n, s) => n + s.total, 0), [secoes]);
 
-  async function copiarTudo() {
-    if (camposPreenchidos.length === 0) return;
-    const texto = camposPreenchidos.map((c) => `${c.rotulo}: ${c.valor}`).join("\n");
-    try {
-      await navigator.clipboard.writeText(texto);
-      setCopiadoTudo(true);
-      setTimeout(() => setCopiadoTudo(false), 1500);
-    } catch {
-      // Clipboard indisponível.
-    }
+  function toggleSecao(id: string) {
+    setFechadas((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+  }
+
+  function handleCopiarTudo() {
+    const texto = secoes
+      .filter((s) => s.total > 0)
+      .map((s) => `=== Etapa ${s.numero} · ${s.titulo} ===\n${textoSecao(s)}`)
+      .join("\n\n");
+    if (texto) copiarTudo(texto);
   }
 
   return (
@@ -92,8 +213,9 @@ export default function PaginaEmpenho() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Consulta para Empenho</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Encontre o contrato e copie os dados prontos para lançar a nota de empenho no SIAFE. Somente leitura —
-          o cadastro é feito em <strong>Cadastros → Contratos</strong>.
+          Encontre o contrato e copie os dados prontos para lançar a nota de empenho no SIAFE. As três etapas abaixo
+          seguem o passo a passo do sistema. Somente leitura — o cadastro é feito em{" "}
+          <strong>Cadastros → Contratos</strong>.
         </p>
       </div>
 
@@ -172,21 +294,30 @@ export default function PaginaEmpenho() {
                         }`}
                   </p>
                 </div>
-                {camposPreenchidos.length > 0 && (
-                  <Botao type="button" variante="secundario" onClick={copiarTudo}>
+                {totalPreenchido > 0 && (
+                  <Botao type="button" variante="secundario" onClick={handleCopiarTudo}>
                     {copiadoTudo ? "Copiado!" : "Copiar tudo"}
                   </Botao>
                 )}
               </div>
 
               <div className="mt-4">
-                {camposPreenchidos.length === 0 ? (
+                {totalPreenchido === 0 ? (
                   <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     Este contrato ainda não tem dados de empenho preenchidos. Um administrador pode preenchê-los em
                     Cadastros → Contratos.
                   </p>
                 ) : (
-                  camposPreenchidos.map((c) => <CampoCopiavel key={c.rotulo} rotulo={c.rotulo} valor={c.valor} />)
+                  <div className="flex flex-col gap-2">
+                    {secoes.map((secao) => (
+                      <SecaoAccordion
+                        key={secao.id}
+                        secao={secao}
+                        aberta={!fechadas.has(secao.id)}
+                        onToggle={() => toggleSecao(secao.id)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </Card>

@@ -8,7 +8,7 @@ import {
   TIPOS_LICITACAO,
 } from "@/lib/constants";
 import { extrairCampos, rotuloCampo, TOKEN_TEXTO_CONTRATO, TOKEN_TEXTO_TA } from "@/lib/template";
-import { CAMPOS_EMPENHO } from "@/lib/empenho";
+import { CAMPOS_EMPENHO, SECOES_EMPENHO } from "@/lib/empenho";
 import { hojeISO } from "@/lib/vigencia";
 import type { Contrato, ModalidadeContrato } from "@/lib/types";
 import { podeEditarBlocoEmpenho, podeEditarBlocoPRD } from "@/lib/setores";
@@ -556,29 +556,54 @@ export default function PaginaContratos() {
           <div className="rounded-md border border-emerald-200 bg-emerald-50/50 px-4 py-3">
             <h3 className="text-sm font-medium text-gray-700">Dados para Empenho (CEO)</h3>
             <p className="mt-1 text-xs text-gray-500">
-              Dados que a equipe de empenho (CEO) consulta para lançar a nota de empenho no SIAFE. São
-              independentes do tipo de PRD — preencha o que fizer sentido para este contrato. Deixe em branco
-              se este contrato não é empenhado aqui.
+              Dados que a equipe de empenho (CEO) consulta para lançar a nota de empenho no SIAFE. As três seções
+              abaixo seguem as etapas do SIAFE. São independentes do tipo de PRD — preencha o que fizer sentido para
+              este contrato. Deixe em branco se este contrato não é empenhado aqui.
             </p>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              {CAMPOS_EMPENHO.map((campo) => (
-                <div key={campo.chave} className={campo.longo ? "sm:col-span-2" : ""}>
-                  <Rotulo htmlFor={`empenho-${campo.chave}`}>{campo.rotulo}</Rotulo>
-                  {campo.longo ? (
-                    <AreaTexto
-                      id={`empenho-${campo.chave}`}
-                      rows={2}
-                      value={dadosEmpenho[campo.chave] ?? ""}
-                      onChange={(e) => setDadoEmpenho(campo.chave, e.target.value)}
-                    />
-                  ) : (
-                    <CampoTexto
-                      id={`empenho-${campo.chave}`}
-                      value={dadosEmpenho[campo.chave] ?? ""}
-                      onChange={(e) => setDadoEmpenho(campo.chave, e.target.value)}
-                    />
-                  )}
-                </div>
+            <div className="mt-4 flex flex-col gap-4">
+              {SECOES_EMPENHO.map((secao) => (
+                <fieldset
+                  key={secao.id}
+                  className="rounded-md border border-emerald-200 bg-white px-4 py-3"
+                >
+                  <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    Etapa {secao.numero} · {secao.titulo}
+                  </legend>
+                  <div className="flex flex-col gap-4">
+                    {secao.grupos.map((grupo, gi) => (
+                      <div key={grupo.titulo ?? gi}>
+                        {grupo.titulo && (
+                          <p className="mb-2 text-xs font-medium text-gray-600">{grupo.titulo}</p>
+                        )}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {/* `repetido`: reexibição na consulta; no cadastro tem só um campo por chave. */}
+                          {grupo.campos.filter((campo) => !campo.repetido).map((campo) => (
+                            <div key={campo.chave} className={campo.longo ? "sm:col-span-2" : ""}>
+                              <Rotulo htmlFor={`empenho-${campo.chave}`}>{campo.rotulo}</Rotulo>
+                              {campo.longo ? (
+                                <AreaTexto
+                                  id={`empenho-${campo.chave}`}
+                                  rows={2}
+                                  value={dadosEmpenho[campo.chave] ?? ""}
+                                  onChange={(e) => setDadoEmpenho(campo.chave, e.target.value)}
+                                />
+                              ) : (
+                                <CampoTexto
+                                  id={`empenho-${campo.chave}`}
+                                  value={dadosEmpenho[campo.chave] ?? ""}
+                                  onChange={(e) => setDadoEmpenho(campo.chave, e.target.value)}
+                                />
+                              )}
+                              {campo.ajuda && (
+                                <p className="mt-1 text-xs text-gray-500">{campo.ajuda}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
               ))}
             </div>
           </div>
