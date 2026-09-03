@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { aplicarAbreviacoes, dividirEmPedacos, verificarLimite } from "@/lib/abbreviation";
+import { aplicarAbreviacoes, dividirEmPedacos, removerAcentos, verificarLimite } from "@/lib/abbreviation";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { hrefInicial } from "@/lib/setores";
 import { readStorage, removeStorage } from "@/lib/storage";
@@ -46,10 +46,12 @@ export default function PaginaAbreviador() {
   const carregando = carregandoPalavras || carregandoConfig;
 
   function handleAbreviar() {
-    const textoProcessado = aplicarAbreviacoes(textoEntrada, palavras, {
+    const abreviado = aplicarAbreviacoes(textoEntrada, palavras, {
       caseSensitive: config.caseSensitive,
       reaplicarAteEstabilizar: config.reaplicarAteEstabilizar,
     });
+    // Passo final: o texto do PRD sai sem acentos nem cedilha (á→a, ç→c, Ç→C).
+    const textoProcessado = removerAcentos(abreviado);
     setResultado(textoProcessado);
     setCopiado(false);
   }

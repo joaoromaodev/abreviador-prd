@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aplicarAbreviacoes, dividirEmPedacos, verificarLimite } from "./abbreviation";
+import { aplicarAbreviacoes, dividirEmPedacos, removerAcentos, verificarLimite } from "./abbreviation";
 import type { PalavraAbreviacao } from "./types";
 
 function entrada(palavra: string, abreviacao: string): PalavraAbreviacao {
@@ -85,6 +85,22 @@ describe("aplicarAbreviacoes", () => {
     const dicionario = [entrada("  ", "x"), entrada("produto", "  ")];
     const resultado = aplicarAbreviacoes("o produto", dicionario, OPCOES_PADRAO);
     expect(resultado).toBe("o produto");
+  });
+});
+
+describe("removerAcentos", () => {
+  it("troca cedilha por c preservando a caixa (ç→c, Ç→C)", () => {
+    expect(removerAcentos("Serviço de Manutenção")).toBe("Servico de Manutencao");
+    expect(removerAcentos("AÇÃO")).toBe("ACAO");
+  });
+
+  it("remove acentos de vogais mantendo a letra-base", () => {
+    expect(removerAcentos("órgão público não é fácil")).toBe("orgao publico nao e facil");
+    expect(removerAcentos("aeiou áéíóú âêô ãõ ü")).toBe("aeiou aeiou aeo ao u");
+  });
+
+  it("não altera texto que já está sem acento", () => {
+    expect(removerAcentos("contrato 123/2020 - sede")).toBe("contrato 123/2020 - sede");
   });
 });
 

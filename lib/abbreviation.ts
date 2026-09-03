@@ -100,6 +100,15 @@ export function aplicarAbreviacoes(
   return resultado;
 }
 
+/**
+ * Remove acentos e cedilha do texto, preservando maiúsculas/minúsculas: á→a, ã→a, é→e, ô→o, ü→u,
+ * ç→c, Ç→C. Usado como passo FINAL do abreviador (o texto do PRD não deve levar esses caracteres).
+ * Aplicado só depois de abreviar, para que entradas acentuadas ("São Paulo") ainda casem.
+ */
+export function removerAcentos(texto: string): string {
+  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
 export interface ResultadoLimite {
   cabe: boolean;
   tamanho: number;
